@@ -184,7 +184,7 @@ const DEF_SPLIT = {
   6:{name:'Dinlenme', ex:[]},
   0:{name:'Dinlenme', ex:[]}
 };
-function blank(){ return {schedule:[], done:{}, books:[], split:JSON.parse(JSON.stringify(DEF_SPLIT)), lifts:[], weights:[], goal:null}; }
+function blank(){ return {schedule:[], done:{}, books:[], split:JSON.parse(JSON.stringify(DEF_SPLIT)), lifts:[], weights:[], goal:null, calAlarm:5, calGym:true, calExportAt:null, schedChangedAt:null}; }
 function load(){
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && typeof s === 'object') return Object.assign(blank(), s); } catch(e){}
   return blank();
@@ -358,7 +358,82 @@ function vPlan(){
     });
     h += '</div><button class="btn ghost" data-act="addItem">Etkinlik ekle</button>';
   }
+  if (S.schedule.length){
+    const stale = S.calExportAt && S.schedChangedAt && S.schedChangedAt > S.calExportAt;
+    h += `<button class="row card" style="margin-top:16px;border-radius:18px" data-act="calExport">
+      <span class="grow"><span class="t">Takvime aktar</span><br><span class="muted tiny">${
+        !S.calExportAt ? 'iPhone Takvimi bildirim gönderir, Takvim widget\'ı sıradaki işini gösterir'
+        : stale ? '<span style="color:var(--danger)">Program son aktarımdan sonra değişti, tekrar aktar</span>'
+        : 'Son aktarım: ' + fmtDate(S.calExportAt.slice(0,10))}</span></span><span class="muted">›</span></button>`;
+  }
   return h;
+}
+
+/* ---------- takvim (.ics) ---------- */
+const ICS_DAY = ['SU','MO','TU','WE','TH','FR','SA'];
+const icsEsc = s => String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+const icsDate = d => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate());
+const icsDT = (d, hm) => icsDate(d) + 'T' + hm.replace(':','') + '00';
+function icsFold(line){
+  const out = []; let s = line;
+  while (s.length > 70){ out.push(s.slice(0,70)); s = ' ' + s.slice(70); }
+  out.push(s); return out.join('\r\n');
+}
+function buildIcs(alarm, withGym){
+  const now = new Date(), t0 = parseDs(today());
+  const stamp = now.toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  const L = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//HayatPlan//TR','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:HayatPlan'];
+  const firstOn = days => { for (let k = 0; k < 7; k++){ const d = new Date(t0); d.setDate(d.getDate()+k); if (days.includes(d.getDay())) return d; } return null; };
+  const alarmLines = title => alarm < 0 ? [] : ['BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(title), 'TRIGGER:' + (alarm === 0 ? 'PT0M' : '-PT'+alarm+'M'),'END:VALARM'];
+  let n = 0;
+  S.schedule.forEach(i => {
+    const start = i.date ? parseDs(i.date) : firstOn(i.days || []);
+    if (!start || (i.date && i.date < today())) return;
+    const end = new Date(start); if (toMin(i.end) <= toMin(i.start)) end.setDate(end.getDate()+1);
+    L.push('BEGIN:VEVENT','UID:'+i.id+'@hayatplan','DTSTAMP:'+stamp,'SUMMARY:'+icsEsc(i.title),
+      'DTSTART:'+icsDT(start, i.start),'DTEND:'+icsDT(end, i.end));
+    if (!i.date) L.push('RRULE:FREQ=WEEKLY;BYDAY=' + WEEK.filter(d => i.days.includes(d)).map(d => ICS_DAY[d]).join(','));
+    L.push(...alarmLines(i.title), 'END:VEVENT'); n++;
+  });
+  if (withGym){
+    WEEK.forEach(d => {
+      const sp = S.split[d]; if (!sp || /dinlen/i.test(sp.name)) return;
+      const start = firstOn([d]), end = new Date(start); end.setDate(end.getDate()+1);
+      L.push('BEGIN:VEVENT','UID:gym-'+d+'@hayatplan','DTSTAMP:'+stamp,'SUMMARY:'+icsEsc('Spor: '+sp.name),
+        'DTSTART;VALUE=DATE:'+icsDate(start),'DTEND;VALUE=DATE:'+icsDate(end),'RRULE:FREQ=WEEKLY;BYDAY='+ICS_DAY[d],
+        'DESCRIPTION:'+icsEsc((sp.ex||[]).join('\n')),'TRANSP:TRANSPARENT','END:VEVENT'); n++;
+    });
+  }
+  L.push('END:VCALENDAR');
+  return {text: L.map(icsFold).join('\r\n') + '\r\n', count: n};
+}
+function calForm(){
+  const opts = [[-1,'Bildirim yok'],[0,'Başladığında'],[5,'5 dk önce'],[10,'10 dk önce'],[15,'15 dk önce'],[30,'30 dk önce']];
+  openSheet({title:'Takvime aktar', submit:'Aktar', body: `
+    ${field('Bildirim', `<select name="alarm">${opts.map(([v,l]) => `<option value="${v}"${S.calAlarm === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
+    <label class="field" style="display:flex;align-items:center;gap:12px"><span class="grow" style="flex:1">Spor günlerini de ekle<br><span class="muted tiny">Tüm gün etkinliği: "Spor: Omuz" gibi</span></span><input type="checkbox" name="gym" style="width:22px;height:22px;flex:none;accent-color:var(--accent)"${S.calGym ? ' checked' : ''}></label>
+    <div class="sec" style="font-size:16px;margin-top:18px">Nasıl çalışır?</div>
+    <div class="card small" style="line-height:1.5">
+      1. <b>Aktar</b>'a bas. Açılan ekranda <b>Takvim</b>'i seç ya da dosyayı <b>Dosyalar</b>'a kaydedip oradan aç.<br>
+      2. <b>Tümünü Ekle</b> de ve takvim olarak <b>HayatPlan</b>'ı seç. Önce iPhone Takvim uygulamasında bu adla ayrı bir takvim açmanı öneririm.<br>
+      3. Programını değiştirirsen Takvim'den <b>HayatPlan</b> takvimini silip yeniden oluştur, sonra tekrar aktar. Böylece eski etkinlikler tekrarlanmaz.
+    </div>`,
+    onSubmit: fd => {
+      S.calAlarm = parseInt(fd.get('alarm')); S.calGym = !!fd.get('gym');
+      const {text, count} = buildIcs(S.calAlarm, S.calGym);
+      if (!count){ alert('Aktarılacak etkinlik yok.'); return false; }
+      S.calExportAt = new Date().toISOString();
+      shareIcs(text);
+    }});
+}
+async function shareIcs(text){
+  const name = 'HayatPlan.ics';
+  try {
+    const file = new File([text], name, {type:'text/calendar'});
+    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'HayatPlan takvimi'}); return; }
+  } catch(e){ if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'text/calendar'})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
 /* --- Kitaplar --- */
@@ -592,6 +667,7 @@ const A = {
   planDay: d => { ui.planDate = d.date; render(); },
   addItem: () => itemForm(null),
   editItem: d => itemForm(S.schedule.find(i => i.id === d.id)),
+  calExport: calForm,
   bookTab: d => { ui.bookTab = d.k; render(); },
   addBook: () => bookForm(null),
   editBook: d => bookForm(S.books.find(b => b.id === d.id)),
@@ -657,8 +733,9 @@ function itemForm(it){
       obj.title = title; obj.start = fd.get('start'); obj.end = fd.get('end');
       if (ds_.length){ obj.days = ds_; delete obj.date; } else { obj.date = (it && it.date) || ui.planDate || today(); delete obj.days; }
       if (isNew) S.schedule.push(obj);
+      S.schedChangedAt = new Date().toISOString();
     },
-    onDelete: isNew ? null : () => { if (!confirm('Etkinlik silinsin mi?' + (repeatOn ? ' (Tüm tekrarlarıyla birlikte)' : ''))) return false; S.schedule = S.schedule.filter(x => x !== it); }
+    onDelete: isNew ? null : () => { if (!confirm('Etkinlik silinsin mi?' + (repeatOn ? ' (Tüm tekrarlarıyla birlikte)' : ''))) return false; S.schedule = S.schedule.filter(x => x !== it); S.schedChangedAt = new Date().toISOString(); }
   });
 }
 A.quickDays = d => { const v = d.v ? d.v.split(',') : []; document.querySelectorAll('#sheet [name=days]').forEach(c => c.checked = v.includes(c.value)); };
