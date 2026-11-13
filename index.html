@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HayatPlan</title>
+<meta name="description" content="Günlük program, kitaplar, spor ve kilo takibi.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HayatPlan">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#F2F2F7; --card:#FFFFFF; --ink:#1C1C1E; --ink2:#6B6B70; --ink3:#9A9AA0;
+  --line:#E5E5EA; --accent:#4F46E5; --accent-soft:rgba(79,70,229,.10);
+  --good:#1F9D55; --danger:#D93025; --bar:rgba(249,249,251,.88); --shadow:0 1px 3px rgba(0,0,0,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --card:#1C1C1E; --ink:#F2F2F7; --ink2:#A1A1A6; --ink3:#6E6E73;
+    --line:#2C2C2E; --accent:#7C7AF0; --accent-soft:rgba(124,122,240,.16);
+    --good:#34C770; --danger:#FF5F57; --bar:rgba(22,22,24,.88); --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --card:#1C1C1E; --ink:#F2F2F7; --ink2:#A1A1A6; --ink3:#6E6E73;
+  --line:#2C2C2E; --accent:#7C7AF0; --accent-soft:rgba(124,122,240,.16);
+  --good:#34C770; --danger:#FF5F57; --bar:rgba(22,22,24,.88); --shadow:none;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;-webkit-user-select:none;user-select:none}
+input,textarea,select{-webkit-user-select:text;user-select:text}
+button{font:inherit;color:inherit;cursor:pointer}
+main{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 100px)}
+.hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:10px 0 16px}
+.hdr h1{font-size:32px;line-height:1.1;font-weight:700;letter-spacing:-.02em;margin:0}
+.sub{color:var(--ink2);font-size:15px;margin-top:2px}
+.icon-btn{border:0;background:var(--card);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;box-shadow:var(--shadow)}
+.icon-btn svg{width:20px;height:20px}
+.card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.label{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.sec{font-size:20px;font-weight:700;margin:22px 0 10px;letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:center}
+.muted{color:var(--ink2)} .small{font-size:14px} .tiny{font-size:12px}
+.now .title{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:6px 0 2px;line-height:1.15}
+.now .meta{color:var(--ink2);font-size:15px}
+.now .next{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:15px;color:var(--ink2)}
+.now .next b{color:var(--ink);font-weight:600}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:12px 0 8px}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2 .card{margin:0;display:flex;flex-direction:column;min-width:0}
+.mini .big{font-size:19px;font-weight:700;margin:6px 0 2px;line-height:1.2;overflow-wrap:anywhere}
+.mini .grow{flex:1}
+.btn{border:0;background:var(--accent);color:#fff;border-radius:12px;padding:12px 16px;font-weight:600;font-size:16px;width:100%}
+.btn.ghost{background:var(--accent-soft);color:var(--accent)}
+.btn.sm{padding:8px 12px;font-size:14px;border-radius:10px;width:auto}
+.btn.danger{background:transparent;color:var(--danger)}
+.btn:active,.row:active,.icon-btn:active{opacity:.6}
+.link{border:0;background:none;color:var(--accent);font-weight:600;font-size:16px;padding:6px 0}
+.seg{display:flex;background:var(--line);border-radius:10px;padding:2px;margin-bottom:14px}
+.seg button{flex:1;border:0;background:none;padding:7px 4px;border-radius:8px;font-size:14px;font-weight:600;color:var(--ink)}
+.seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.list{background:var(--card);border-radius:18px;overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:12px;padding:13px 16px;border:0;background:none;width:100%;text-align:left;position:relative}
+.row+.row::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:1px solid var(--line)}
+.row .t{font-weight:600;overflow-wrap:anywhere}
+.row .grow{flex:1;min-width:0}
+.time{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:14px;width:96px;flex:none}
+.chk{width:26px;height:26px;border-radius:50%;border:2px solid var(--ink3);flex:none;display:grid;place-items:center;color:#fff}
+.chk svg{width:14px;height:14px;opacity:0}
+.done .chk{background:var(--good);border-color:var(--good)} .done .chk svg{opacity:1}
+.done .t{text-decoration:line-through;color:var(--ink3)}
+.past:not(.done) .t{color:var(--ink2)}
+.cur{background:var(--accent-soft)}
+.cur .time{color:var(--accent);font-weight:600}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.daystrip{display:flex;gap:6px;overflow-x:auto;margin:0 -16px 14px;padding:0 16px;scrollbar-width:none}
+.daystrip::-webkit-scrollbar{display:none}
+.day{border:0;background:var(--card);border-radius:14px;min-width:52px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:var(--shadow)}
+.day small{font-size:12px;color:var(--ink2);font-weight:600}
+.day b{font-size:19px}
+.day.on{background:var(--accent);color:#fff}
+.day.on small{color:rgba(255,255,255,.85)}
+.empty{text-align:center;color:var(--ink2);padding:28px 16px}
+.empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--card);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+.stat .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .k{font-size:12px;color:var(--ink2);margin-top:2px}
+.hero{font-size:46px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.hero small{font-size:20px;color:var(--ink2);font-weight:600;margin-left:4px}
+.up{color:var(--danger)} .down{color:var(--good)}
+.inline{display:flex;gap:8px;align-items:center}
+.inline input{flex:1;min-width:0;background:var(--bg);border-radius:12px;padding:12px;font-size:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip span,.chipbtn{display:inline-block;padding:7px 12px;border-radius:999px;background:var(--card);font-size:14px;font-weight:600;border:0;box-shadow:var(--shadow)}
+.chip input:checked+span{background:var(--accent);color:#fff}
+.chipbtn.on{background:var(--accent-soft);color:var(--accent);box-shadow:none}
+.exlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.exlist span{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--bg);color:var(--ink2)}
+.sets{font-size:14px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.chart{position:relative;margin-top:4px}
+.chart svg{display:block;width:100%;touch-action:pan-y;overflow:visible}
+.gl{stroke:var(--line);stroke-width:1}
+.ax{fill:var(--ink3);font-size:11px;font-variant-numeric:tabular-nums}
+.ln{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.dt{fill:var(--accent);stroke:var(--card);stroke-width:2}
+.goal{stroke:var(--ink3);stroke-width:1.5;stroke-dasharray:4 4}
+.gtxt{fill:var(--ink2);font-size:11px;font-weight:600}
+.lbl{fill:var(--ink);font-size:12px;font-weight:700}
+.cross{stroke:var(--ink3);stroke-width:1}
+.tip{position:absolute;top:-8px;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;font-weight:600;padding:4px 8px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-100%)}
+select.pick{appearance:none;-webkit-appearance:none;background:var(--card);border:0;border-radius:12px;padding:12px 14px;font-size:16px;font-weight:600;width:100%;margin-bottom:12px;box-shadow:var(--shadow);color:var(--ink)}
+/* tabbar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:space-around;padding:6px 4px calc(env(safe-area-inset-bottom) + 4px);background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line)}
+.tabbar button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;color:var(--ink3);flex:1;padding:4px 0}
+.tabbar svg{width:25px;height:25px}
+.tabbar .on{color:var(--accent)}
+/* sheet */
+.sheet-wrap{position:fixed;inset:0;z-index:50}
+.sheet-wrap[hidden]{display:none}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.4);animation:fade .2s ease}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow:auto;background:var(--bg);border-radius:20px 20px 0 0;padding:0 16px calc(env(safe-area-inset-bottom) + 24px);animation:up .25s cubic-bezier(.2,.8,.2,1);max-width:640px;margin:0 auto}
+.sheet-h{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:14px 0 12px;background:var(--bg)}
+.sheet-h h2{font-size:17px;margin:0;text-align:center}
+.sheet-h .link:last-child{text-align:right}
+.sheet-h .link:first-child{text-align:left;font-weight:400}
+.field{background:var(--card);border-radius:12px;padding:10px 14px;margin-bottom:10px}
+.field>label{display:block;font-size:13px;color:var(--ink2);margin-bottom:2px}
+.field input,.field textarea,.field select{font:inherit;font-size:16px;color:var(--ink);background:transparent;border:0;outline:0;width:100%;padding:4px 0;min-height:30px}
+.field textarea{resize:vertical;min-height:120px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.two .field{margin-bottom:10px}
+.setrow{display:grid;grid-template-columns:28px 1fr 1fr 32px;gap:8px;align-items:center;margin-bottom:8px}
+.setrow input{background:var(--card);border:0;border-radius:10px;padding:10px;font-size:16px;color:var(--ink);width:100%;min-width:0;font-variant-numeric:tabular-nums}
+.setrow .n{color:var(--ink2);font-size:14px;text-align:center;font-weight:600}
+.setrow button{border:0;background:none;color:var(--ink3);font-size:20px}
+.hint{font-size:13px;color:var(--ink2);margin:-2px 2px 10px}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+@keyframes fade{from{opacity:0}}
+@media (min-width:500px){.hdr h1{font-size:34px}}
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<nav class="tabbar" id="tabbar">
+  <button data-act="tab" data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Bugün</button>
+  <button data-act="tab" data-tab="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Plan</button>
+  <button data-act="tab" data-tab="books"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7.5 4.5 4 4.5v14c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2v-14c-3.5 0-6 .5-8 2zM12 6.5v14"/></svg>Kitaplar</button>
+  <button data-act="tab" data-tab="gym"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>Spor</button>
+  <button data-act="tab" data-tab="weight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8.5 9a5 5 0 0 1 7 0l-2.2 2.6M12 11.8l1.3-1.6"/></svg>Kilo</button>
+</nav>
+
+<div class="sheet-wrap" id="sheetWrap" hidden>
+  <div class="scrim" data-act="closeSheet"></div>
+  <form class="sheet" id="sheet" autocomplete="off"></form>
+</div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+'use strict';
+/* ---------- veri ---------- */
+const KEY = 'hayatplan.v1';
+const DAY_LONG  = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+const DAY_SHORT = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+const WEEK = [1,2,3,4,5,6,0];
+const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const PRESETS = ['Göğüs','Sırt','Omuz','Kol','Bacak','Göğüs + Arka kol','Sırt + Ön kol','Full Body','Kardiyo','Dinlenme'];
+const DEF_SPLIT = {
+  1:{name:'Göğüs', ex:['Bench Press','Incline Dumbbell Press','Cable Fly']},
+  2:{name:'Sırt',  ex:['Barfiks','Barbell Row','Lat Pulldown']},
+  3:{name:'Bacak', ex:['Squat','Leg Press','Romanian Deadlift']},
+  4:{name:'Omuz',  ex:['Overhead Press','Lateral Raise','Rear Delt Fly']},
+  5:{name:'Kol',   ex:['Barbell Curl','Triceps Pushdown','Hammer Curl']},
+  6:{name:'Dinlenme', ex:[]},
+  0:{name:'Dinlenme', ex:[]}
+};
+function blank(){ return {schedule:[], done:{}, books:[], split:JSON.parse(JSON.stringify(DEF_SPLIT)), lifts:[], weights:[], goal:null}; }
+function load(){
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && typeof s === 'object') return Object.assign(blank(), s); } catch(e){}
+  return blank();
+}
+let S = load();
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ alert('Kaydedilemedi: depolama alanı dolu ya da kapalı.'); } }
+
+let ui = {tab:'today', planDate:null, bookTab:'reading', gymTab:'program', ex:null, metric:'top', range:'3m'};
+try { Object.assign(ui, JSON.parse(localStorage.getItem('hayatplan.ui')) || {}); } catch(e){}
+function saveUi(){ try { localStorage.setItem('hayatplan.ui', JSON.stringify({tab:ui.tab, bookTab:ui.bookTab, gymTab:ui.gymTab, ex:ui.ex, metric:ui.metric, range:ui.range})); } catch(e){} }
+
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
+
+/* ---------- yardımcılar ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const ds = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parseDs = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const today = () => ds(new Date());
+const toMin = t => { const [h,m] = String(t||'0:0').split(':').map(Number); return (h||0)*60 + (m||0); };
+const fmtMin = m => pad(Math.floor(m/60)%24)+':'+pad(m%60);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const num = v => { const n = parseFloat(String(v ?? '').replace(',','.')); return isFinite(n) ? n : null; };
+const fmtNum = (n, d=1) => n == null ? '–' : (Math.round(n * 10**d) / 10**d).toLocaleString('tr-TR');
+const fmtDate = (s, dow) => { const d = parseDs(s); return d.getDate()+' '+MONTHS[d.getMonth()]+(dow ? ' '+DAY_LONG[d.getDay()] : ''); };
+const fmtShort = s => { const d = parseDs(s); return d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3); };
+const dur = m => m < 60 ? m+' dk' : Math.floor(m/60)+' sa'+(m%60 ? ' '+(m%60)+' dk' : '');
+const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ICON_GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+const ICON_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+
+function itemsFor(s){
+  const dow = parseDs(s).getDay();
+  return S.schedule.filter(i => i.date ? i.date === s : (i.days||[]).includes(dow))
+                   .sort((a,b) => toMin(a.start) - toMin(b.start));
+}
+function span(i){ let a = toMin(i.start), b = toMin(i.end || i.start); if (b <= a) b += 1440; return [a,b]; }
+function repeatText(i){
+  if (i.date) return 'Tek seferlik';
+  const d = i.days || [];
+  if (d.length === 7) return 'Her gün';
+  if (d.length === 5 && [1,2,3,4,5].every(x => d.includes(x))) return 'Hafta içi';
+  if (d.length === 2 && d.includes(0) && d.includes(6)) return 'Hafta sonu';
+  return WEEK.filter(x => d.includes(x)).map(x => DAY_SHORT[x]).join(', ');
+}
+function readingBooks(){ return S.books.filter(b => b.status === 'reading'); }
+function liftsOn(s){ return S.lifts.filter(l => l.date === s); }
+function allExercises(){
+  const set = new Map();
+  Object.values(S.split).forEach(d => (d.ex||[]).forEach(e => set.set(e.toLowerCase(), e)));
+  S.lifts.forEach(l => set.set(l.ex.toLowerCase(), l.ex));
+  return [...set.values()].sort((a,b) => a.localeCompare(b,'tr'));
+}
+function lastSession(ex, beforeDate){
+  const k = ex.trim().toLowerCase();
+  const l = S.lifts.filter(x => x.ex.toLowerCase() === k && (!beforeDate || x.date <= beforeDate))
+                   .sort((a,b) => (b.date+b.id).localeCompare(a.date+a.id))[0];
+  return l || null;
+}
+const setsText = sets => sets.map(s => fmtNum(s.w)+'×'+s.r).join('  ·  ');
+
+/* ---------- render ---------- */
+const VIEWS = {today:vToday, plan:vPlan, books:vBooks, gym:vGym, weight:vWeight};
+let afterRender = [];
+function render(){
+  afterRender = [];
+  if (!VIEWS[ui.tab]) ui.tab = 'today';
+  $('#app').innerHTML = VIEWS[ui.tab]();
+  document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === ui.tab));
+  afterRender.forEach(f => f());
+  saveUi();
+}
+function header(title, sub, right=''){
+  return `<div class="hdr"><div><h1>${esc(title)}</h1>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}</div>${right}</div>`;
+}
+
+/* --- Bugün --- */
+function vToday(){
+  const now = new Date(), s = ds(now), nm = now.getHours()*60 + now.getMinutes();
+  const items = itemsFor(s), done = S.done[s] || [];
+  const cur = items.find(i => { const [a,b] = span(i); return nm >= a && nm < b; });
+  const next = items.find(i => toMin(i.start) > nm && i !== cur);
+  let h = header('Bugün', fmtDate(s, true), `<button class="icon-btn" data-act="settings" aria-label="Ayarlar">${ICON_GEAR}</button>`);
+
+  // Şu an kartı
+  h += '<div class="card now">';
+  if (cur){
+    const [a,b] = span(cur), p = Math.min(100, (nm-a)/(b-a)*100);
+    h += `<div class="label">Şu an</div><div class="title">${esc(cur.title)}</div>
+      <div class="meta">${esc(cur.start)} – ${esc(cur.end)}</div>
+      <div class="bar"><i style="width:${p}%"></i></div>
+      <div class="meta">${dur(b-nm)} kaldı</div>`;
+    if (next) h += `<div class="next">Sıradaki: <b>${esc(next.title)}</b> · ${esc(next.start)}</div>`;
+  } else if (next){
+    h += `<div class="label">Sıradaki</div><div class="title">${esc(next.title)}</div>
+      <div class="meta">${esc(next.start)}'da başlıyor · ${dur(toMin(next.start)-nm)} sonra</div>`;
+  } else if (items.length){
+    h += `<div class="label">Şu an</div><div class="title">Serbest zaman</div><div class="meta">Bugünün programı bitti. ${done.length}/${items.length} tamamlandı.</div>`;
+  } else {
+    h += `<div class="label">Şu an</div><div class="title">Bugün için plan yok</div>
+      <div class="meta" style="margin-bottom:12px">Gününü planla, burada o saatte ne yapman gerektiği görünsün.</div>
+      <button class="btn ghost" data-act="tab" data-tab="plan">Program oluştur</button>`;
+  }
+  h += '</div>';
+
+  // Kitap + Spor
+  const rb = readingBooks()[0];
+  const sp = S.split[now.getDay()] || {name:'Dinlenme', ex:[]};
+  const rest = /dinlen/i.test(sp.name);
+  const logged = liftsOn(s).length;
+  h += '<div class="grid2">';
+  if (rb){
+    const p = rb.pages ? Math.round((rb.current||0)/rb.pages*100) : 0;
+    h += `<div class="card mini"><div class="label">Okuduğum</div><div class="big">${esc(rb.title)}</div>
+      <div class="muted small grow">${esc(rb.author||'')}</div>
+      <div class="bar"><i style="width:${p}%"></i></div>
+      <div class="muted tiny" style="margin-bottom:10px">${rb.pages ? `${rb.current||0}/${rb.pages} sayfa · %${p}` : 'Sayfa sayısı yok'}</div>
+      <button class="btn ghost sm" data-act="bookPage" data-id="${rb.id}">Sayfa gir</button></div>`;
+  } else {
+    h += `<div class="card mini"><div class="label">Okuduğum</div><div class="big muted">Kitap yok</div><div class="grow"></div>
+      <button class="btn ghost sm" data-act="tab" data-tab="books">Kitap ekle</button></div>`;
+  }
+  h += `<div class="card mini"><div class="label">Spor · ${DAY_SHORT[now.getDay()]}</div><div class="big">${esc(sp.name)}</div>
+    <div class="muted small grow">${rest ? 'Dinlenme günü' : `${(sp.ex||[]).length} hareket`}${logged ? ` · ${logged} kayıt` : ''}</div>
+    ${rest ? '' : `<button class="btn ghost sm" style="margin-top:10px" data-act="goLog">${logged ? 'Devam et' : 'Başla'}</button>`}</div>`;
+  h += '</div>';
+
+  // Program listesi
+  if (items.length){
+    h += `<div class="sec">Günün programı <span class="muted small">${done.length}/${items.length}</span></div><div class="list">`;
+    items.forEach(i => {
+      const [a,b] = span(i), isDone = done.includes(i.id);
+      const cls = (isDone ? ' done' : '') + (i === cur ? ' cur' : '') + (b <= nm ? ' past' : '');
+      h += `<button class="row${cls}" data-act="toggleDone" data-id="${i.id}">
+        <span class="time">${esc(i.start)} – ${esc(i.end)}</span><span class="grow t">${esc(i.title)}</span><span class="chk">${ICON_CHECK}</span></button>`;
+    });
+    h += '</div>';
+  }
+
+  // Kilo özeti
+  const w = [...S.weights].sort((a,b) => a.d.localeCompare(b.d));
+  const lw = w[w.length-1];
+  h += `<div class="sec">Kilo</div><div class="card"><div class="inline" style="justify-content:space-between">
+      <div><div class="hero" style="font-size:30px">${lw ? fmtNum(lw.kg) : '–'}<small>kg</small></div>
+      <div class="muted tiny">${lw ? (lw.d === s ? 'Bugün tartıldın' : 'Son: '+fmtDate(lw.d)) : 'Henüz kayıt yok'}</div></div>
+      <button class="btn ghost sm" data-act="tab" data-tab="weight">${lw && lw.d === s ? 'Detay' : 'Bugünü gir'}</button></div></div>`;
+  return h;
+}
+
+/* --- Plan --- */
+function vPlan(){
+  if (!ui.planDate || ui.planDate < today()) ui.planDate = today();
+  let h = header('Plan', 'Günlük programın', `<button class="icon-btn" data-act="addItem" aria-label="Ekle">${ICON_PLUS}</button>`);
+  h += '<div class="daystrip">';
+  for (let k = 0; k < 14; k++){
+    const d = new Date(); d.setDate(d.getDate() + k);
+    const s = ds(d);
+    h += `<button class="day${s === ui.planDate ? ' on' : ''}" data-act="planDay" data-date="${s}"><small>${k === 0 ? 'Bugün' : DAY_SHORT[d.getDay()]}</small><b>${d.getDate()}</b></button>`;
+  }
+  h += '</div>';
+  const items = itemsFor(ui.planDate);
+  h += `<div class="sec" style="margin-top:4px">${fmtDate(ui.planDate, true)}</div>`;
+  if (!items.length){
+    h += `<div class="card empty"><b>Bu gün boş</b>Saat aralığıyla bir etkinlik ekle. Her hafta tekrarlanabilir ya da tek seferlik olabilir.<div style="margin-top:14px"><button class="btn" data-act="addItem">Etkinlik ekle</button></div></div>`;
+  } else {
+    h += '<div class="list">';
+    items.forEach(i => {
+      h += `<button class="row" data-act="editItem" data-id="${i.id}"><span class="time">${esc(i.start)} – ${esc(i.end)}</span>
+        <span class="grow"><span class="t">${esc(i.title)}</span><br><span class="muted tiny">${esc(repeatText(i))}</span></span></button>`;
+    });
+    h += '</div><button class="btn ghost" data-act="addItem">Etkinlik ekle</button>';
+  }
+  return h;
+}
+
+/* --- Kitaplar --- */
+function vBooks(){
+  const year = String(new Date().getFullYear());
+  const finishedYear = S.books.filter(b => b.status === 'done' && (b.finishedAt||'').startsWith(year)).length;
+  let h = header('Kitaplar', `${year}'de ${finishedYear} kitap bitirdin`, `<button class="icon-btn" data-act="addBook" aria-label="Kitap ekle">${ICON_PLUS}</button>`);
+  const groups = {reading:'Okuyorum', queue:'Sırada', done:'Bitti'};
+  h += '<div class="seg">' + Object.entries(groups).map(([k,v]) =>
+    `<button class="${ui.bookTab === k ? 'on' : ''}" data-act="bookTab" data-k="${k}">${v} ${S.books.filter(b => b.status === k).length || ''}</button>`).join('') + '</div>';
+  let list = S.books.filter(b => b.status === ui.bookTab);
+  if (ui.bookTab === 'done') list.sort((a,b) => (b.finishedAt||'').localeCompare(a.finishedAt||''));
+  if (!list.length){
+    const msg = {reading:'Şu an okuduğun kitap yok. Sıradakilerden birine başla ya da yeni ekle.', queue:'Okumak istediğin kitapları buraya ekle.', done:'Bitirdiğin kitaplar burada birikecek.'}[ui.bookTab];
+    return h + `<div class="card empty"><b>Liste boş</b>${msg}<div style="margin-top:14px"><button class="btn" data-act="addBook">Kitap ekle</button></div></div>`;
+  }
+  list.forEach(b => {
+    const p = b.pages ? Math.round((b.current||0)/b.pages*100) : 0;
+    h += `<div class="card"><div class="inline" style="justify-content:space-between;align-items:flex-start">
+      <div style="min-width:0"><div style="font-weight:700;font-size:17px;overflow-wrap:anywhere">${esc(b.title)}</div><div class="muted small">${esc(b.author||'Yazar yok')}${b.pages ? ' · '+b.pages+' sayfa' : ''}</div></div>
+      <button class="link small" data-act="editBook" data-id="${b.id}">Düzenle</button></div>`;
+    if (b.status === 'reading'){
+      h += `<div class="bar"><i style="width:${p}%"></i></div><div class="muted tiny" style="margin-bottom:12px">${b.pages ? `${b.current||0}/${b.pages} sayfa · %${p}` : ''}${b.startedAt ? ' · Başlangıç '+fmtShort(b.startedAt) : ''}</div>
+        <div class="grid2"><button class="btn ghost sm" data-act="bookPage" data-id="${b.id}">Sayfa gir</button><button class="btn sm" data-act="bookFinish" data-id="${b.id}">Bitirdim</button></div>`;
+    } else if (b.status === 'queue'){
+      h += `<div style="margin-top:12px"><button class="btn ghost sm" data-act="bookStart" data-id="${b.id}">Okumaya başla</button></div>`;
+    } else {
+      h += `<div class="muted tiny" style="margin-top:8px"><span class="pill">Bitti</span> ${b.finishedAt ? fmtDate(b.finishedAt) : ''}${b.startedAt && b.finishedAt ? ' · '+Math.max(1, Math.round((parseDs(b.finishedAt)-parseDs(b.startedAt))/864e5)+1)+' günde' : ''}</div>`;
+    }
+    h += '</div>';
+  });
+  return h;
+}
+
+/* --- Spor --- */
+function vGym(){
+  let h = header('Spor', 'Program, kayıt ve gelişim');
+  const tabs = {program:'Program', log:'Kayıt', progress:'Gelişim'};
+  h += '<div class="seg">' + Object.entries(tabs).map(([k,v]) => `<button class="${ui.gymTab === k ? 'on' : ''}" data-act="gymTab" data-k="${k}">${v}</button>`).join('') + '</div>';
+  const dow = new Date().getDay();
+
+  if (ui.gymTab === 'program'){
+    h += '<div class="list">';
+    WEEK.forEach(d => {
+      const sp = S.split[d] || {name:'Dinlenme', ex:[]};
+      h += `<button class="row${d === dow ? ' cur' : ''}" data-act="editSplit" data-d="${d}" style="align-items:flex-start">
+        <span class="time" style="padding-top:1px">${DAY_LONG[d]}</span>
+        <span class="grow"><span class="t">${esc(sp.name)}</span>${(sp.ex||[]).length ? `<div class="exlist">${sp.ex.map(e => `<span>${esc(e)}</span>`).join('')}</div>` : ''}</span></button>`;
+    });
+    h += '</div><div class="muted tiny" style="text-align:center">Bir güne dokunarak bölgeyi ve hareketleri değiştir.</div>';
+  }
+
+  if (ui.gymTab === 'log'){
+    const s = today(), sp = S.split[dow] || {name:'Dinlenme', ex:[]};
+    const todays = liftsOn(s).map(l => l.ex.toLowerCase());
+    h += `<div class="card"><div class="label">Bugün · ${DAY_LONG[dow]}</div><div style="font-size:22px;font-weight:700;margin:4px 0 10px">${esc(sp.name)}</div>`;
+    if ((sp.ex||[]).length){
+      h += '<div class="chips" style="margin-bottom:12px">' + sp.ex.map(e =>
+        `<button class="chipbtn${todays.includes(e.toLowerCase()) ? ' on' : ''}" data-act="logNew" data-ex="${esc(e)}">${todays.includes(e.toLowerCase()) ? '✓ ' : '+ '}${esc(e)}</button>`).join('') + '</div>';
+    }
+    h += `<button class="btn" data-act="logNew">Hareket kaydet</button></div>`;
+    const dates = [...new Set(S.lifts.map(l => l.date))].sort().reverse().slice(0, 40);
+    if (!dates.length) h += `<div class="card empty"><b>Henüz kayıt yok</b>Yaptığın hareketi, kaldırdığın ağırlığı ve tekrar sayısını kaydet. Gelişim sekmesinde grafiğini görürsün.</div>`;
+    dates.forEach(d => {
+      h += `<div class="sec" style="font-size:16px">${d === s ? 'Bugün' : fmtDate(d, true)}<span class="muted small">${esc((S.split[parseDs(d).getDay()]||{}).name||'')}</span></div><div class="list">`;
+      S.lifts.filter(l => l.date === d).forEach(l => {
+        h += `<button class="row" data-act="editLog" data-id="${l.id}"><span class="grow"><span class="t">${esc(l.ex)}</span><br><span class="sets">${setsText(l.sets)}</span></span></button>`;
+      });
+      h += '</div>';
+    });
+  }
+
+  if (ui.gymTab === 'progress'){
+    const exs = [...new Set(S.lifts.map(l => l.ex))];
+    if (!exs.length) return h + `<div class="card empty"><b>Veri yok</b>Kayıt sekmesinden antrenman girdikçe her hareketin gelişim grafiği burada oluşur.</div>`;
+    const byKey = new Map(exs.map(e => [e.toLowerCase(), e]));
+    if (!ui.ex || !byKey.has(ui.ex.toLowerCase())) ui.ex = S.lifts[S.lifts.length-1].ex;
+    h += `<select class="pick" data-change="pickEx">${[...byKey.values()].sort((a,b)=>a.localeCompare(b,'tr')).map(e => `<option${e.toLowerCase() === ui.ex.toLowerCase() ? ' selected' : ''}>${esc(e)}</option>`).join('')}</select>`;
+    h += `<div class="seg"><button class="${ui.metric === 'top' ? 'on' : ''}" data-act="metric" data-k="top">En ağır set</button><button class="${ui.metric === '1rm' ? 'on' : ''}" data-act="metric" data-k="1rm">Tahmini 1RM</button><button class="${ui.metric === 'vol' ? 'on' : ''}" data-act="metric" data-k="vol">Hacim</button></div>`;
+    const pts = progressPoints(ui.ex, ui.metric);
+    const first = pts[0], last = pts[pts.length-1], best = pts.reduce((m,p) => p.y > m.y ? p : m, pts[0]);
+    const diff = last.y - first.y;
+    h += `<div class="stats">
+      <div class="stat"><div class="v">${fmtNum(last.y)}</div><div class="k">Son (kg)</div></div>
+      <div class="stat"><div class="v">${fmtNum(best.y)}</div><div class="k">En iyi (kg)</div></div>
+      <div class="stat"><div class="v">${diff > 0 ? '+' : ''}${fmtNum(diff)}</div><div class="k">${pts.length} antrenmanda</div></div></div>`;
+    const metricName = {top:'En ağır set', '1rm':'Tahmini 1RM', vol:'Toplam hacim'}[ui.metric];
+    h += `<div class="card"><div class="label">${esc(ui.ex)} · ${metricName}</div><div class="chart" id="exChart"></div></div>`;
+    afterRender.push(() => drawChart($('#exChart'), pts, {unit:'kg'}));
+    h += '<div class="sec" style="font-size:16px">Geçmiş</div><div class="list">';
+    S.lifts.filter(l => l.ex.toLowerCase() === ui.ex.toLowerCase()).sort((a,b) => b.date.localeCompare(a.date)).slice(0, 30).forEach(l => {
+      h += `<button class="row" data-act="editLog" data-id="${l.id}"><span class="time">${fmtShort(l.date)}</span><span class="grow sets">${setsText(l.sets)}</span></button>`;
+    });
+    h += '</div><div class="muted tiny" style="text-align:center;margin-top:-4px">1RM: Epley formülüyle tahmin (ağırlık × (1 + tekrar/30)).</div>';
+  }
+  return h;
+}
+function progressPoints(ex, metric){
+  const k = ex.toLowerCase(), byDate = {};
+  S.lifts.filter(l => l.ex.toLowerCase() === k).forEach(l => (byDate[l.date] = byDate[l.date] || []).push(...l.sets));
+  return Object.keys(byDate).sort().map(d => {
+    const sets = byDate[d].filter(s => s.w != null && s.r > 0);
+    let y = 0;
+    if (metric === 'top') y = Math.max(0, ...sets.map(s => s.w));
+    if (metric === '1rm') y = Math.max(0, ...sets.map(s => s.r === 1 ? s.w : s.w * (1 + s.r/30)));
+    if (metric === 'vol') y = sets.reduce((a,s) => a + s.w*s.r, 0);
+    return {x:parseDs(d).getTime(), y, d};
+  });
+}
+
+/* --- Kilo --- */
+function vWeight(){
+  const w = [...S.weights].sort((a,b) => a.d.localeCompare(b.d));
+  const s = today(), lw = w[w.length-1], first = w[0];
+  let h = header('Kilo', lw ? 'Son tartı: '+fmtDate(lw.d) : 'Kilonu takip et');
+  const todayW = w.find(x => x.d === s);
+  h += `<div class="card"><div class="label">${todayW ? 'Bugünkü kaydı güncelle' : 'Bugünkü kilon'}</div>
+    <div class="inline" style="margin-top:8px"><input id="wInput" inputmode="decimal" placeholder="${lw ? fmtNum(lw.kg) : 'örn. 78,5'}" value="${todayW ? fmtNum(todayW.kg) : ''}"><button class="btn sm" style="padding:12px 18px" data-act="saveWeight">Kaydet</button></div></div>`;
+  if (!w.length) return h + `<div class="card empty"><b>Henüz kayıt yok</b>Her sabah aynı saatte tartılıp buraya girersen gelişimini en doğru şekilde görürsün.</div>` + goalCard();
+  const month = w.filter(x => x.d >= ds(new Date(Date.now() - 30*864e5)));
+  const d30 = month.length > 1 ? lw.kg - month[0].kg : null;
+  const dAll = lw.kg - first.kg;
+  const sign = v => v == null ? '–' : (v > 0 ? '+' : '') + fmtNum(v);
+  h += `<div class="card"><div class="hero">${fmtNum(lw.kg)}<small>kg</small></div>
+    <div class="muted small" style="margin-top:6px">${S.goal ? `Hedef ${fmtNum(S.goal)} kg · ${Math.abs(lw.kg - S.goal) < 0.05 ? 'hedefe ulaştın' : fmtNum(Math.abs(lw.kg - S.goal))+' kg kaldı'}` : 'Hedef belirlenmedi'}</div></div>`;
+  h += `<div class="stats">
+    <div class="stat"><div class="v">${sign(d30)}</div><div class="k">Son 30 gün</div></div>
+    <div class="stat"><div class="v">${sign(dAll)}</div><div class="k">Başlangıçtan beri</div></div>
+    <div class="stat"><div class="v">${fmtNum(Math.min(...w.map(x=>x.kg)))}</div><div class="k">En düşük</div></div></div>`;
+  const ranges = {'1m':['1A',30],'3m':['3A',91],'1y':['1Y',365],all:['Tümü',0]};
+  h += '<div class="seg">' + Object.entries(ranges).map(([k,[l]]) => `<button class="${ui.range === k ? 'on' : ''}" data-act="range" data-k="${k}">${l}</button>`).join('') + '</div>';
+  const days = (ranges[ui.range] || ranges['3m'])[1];
+  const from = days ? ds(new Date(Date.now() - days*864e5)) : '0000';
+  const pts = w.filter(x => x.d >= from).map(x => ({x:parseDs(x.d).getTime(), y:x.kg, d:x.d}));
+  h += `<div class="card"><div class="label">Kilo (kg)</div><div class="chart" id="wChart"></div></div>`;
+  afterRender.push(() => drawChart($('#wChart'), pts, {unit:'kg', goal:S.goal}));
+  h += goalCard();
+  h += '<div class="sec" style="font-size:16px">Kayıtlar</div><div class="list">';
+  [...w].reverse().slice(0, 60).forEach((x, i, arr) => {
+    const prev = arr[i+1], dd = prev ? x.kg - prev.kg : null;
+    h += `<button class="row" data-act="editWeight" data-d="${x.d}"><span class="grow">${fmtDate(x.d, true)}</span>
+      ${dd != null && Math.abs(dd) >= 0.05 ? `<span class="small ${dd > 0 ? 'up' : 'down'}">${dd > 0 ? '▲' : '▼'} ${fmtNum(Math.abs(dd))}</span>` : ''}<span class="t" style="font-variant-numeric:tabular-nums">${fmtNum(x.kg)} kg</span></button>`;
+  });
+  return h + '</div>';
+}
+function goalCard(){
+  return `<button class="row card" style="margin-bottom:12px;border-radius:18px" data-act="editGoal"><span class="grow">Hedef kilo</span><span class="muted">${S.goal ? fmtNum(S.goal)+' kg' : 'Belirle'} ›</span></button>`;
+}
+
+/* ---------- grafik ---------- */
+function niceTicks(min, max, n){
+  const span = max - min || 1, raw = span / n, mag = 10 ** Math.floor(Math.log10(raw)), f = raw / mag;
+  const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag;
+  const out = []; for (let v = Math.floor(min/step)*step; v <= Math.ceil(max/step)*step + step/2; v += step) out.push(+v.toFixed(6));
+  return out;
+}
+function drawChart(el, pts, opt={}){
+  if (!el) return;
+  if (pts.length < 2){ el.innerHTML = `<div class="empty small" style="padding:20px 8px">Grafik için en az 2 farklı günde kayıt gerekiyor.</div>`; return; }
+  const W = el.clientWidth || 320, H = 210, P = {l:36, r:14, t:22, b:26};
+  const ys = pts.map(p => p.y); if (opt.goal != null) ys.push(opt.goal);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if (y1 - y0 < 1){ y0 -= 1; y1 += 1; }
+  const ticks = niceTicks(y0, y1, 4); y0 = ticks[0]; y1 = ticks[ticks.length-1];
+  const x0 = pts[0].x, x1 = pts[pts.length-1].x;
+  const sx = x => P.l + (x - x0) / (x1 - x0 || 1) * (W - P.l - P.r);
+  const sy = y => P.t + (1 - (y - y0) / (y1 - y0)) * (H - P.t - P.b);
+  let g = '';
+  ticks.forEach(t => { g += `<line class="gl" x1="${P.l}" x2="${W-P.r}" y1="${sy(t)}" y2="${sy(t)}"/><text class="ax" x="${P.l-6}" y="${sy(t)+4}" text-anchor="end">${fmtNum(t)}</text>`; });
+  const xl = [pts[0], pts[pts.length-1]];
+  if (pts.length > 4) xl.splice(1, 0, pts[Math.floor(pts.length/2)]);
+  xl.forEach((p,i) => { g += `<text class="ax" x="${sx(p.x)}" y="${H-6}" text-anchor="${i === 0 ? 'start' : i === xl.length-1 ? 'end' : 'middle'}">${fmtShort(p.d)}</text>`; });
+  if (opt.goal != null && opt.goal >= y0 && opt.goal <= y1){
+    g += `<line class="goal" x1="${P.l}" x2="${W-P.r}" y1="${sy(opt.goal)}" y2="${sy(opt.goal)}"/><text class="gtxt" x="${P.l+4}" y="${sy(opt.goal)-5}">Hedef</text>`;
+  }
+  const d = pts.map((p,i) => (i ? 'L' : 'M') + sx(p.x).toFixed(1) + ' ' + sy(p.y).toFixed(1)).join(' ');
+  g += `<path class="ln" d="${d}"/>`;
+  if (pts.length <= 30) pts.forEach(p => { g += `<circle class="dt" r="4" cx="${sx(p.x)}" cy="${sy(p.y)}"/>`; });
+  const L = pts[pts.length-1];
+  g += `<circle class="dt" r="5" cx="${sx(L.x)}" cy="${sy(L.y)}"/><text class="lbl" x="${sx(L.x)}" y="${sy(L.y)-10}" text-anchor="end">${fmtNum(L.y)}</text>`;
+  g += `<line class="cross" id="cx" y1="${P.t}" y2="${H-P.b}" visibility="hidden"/><circle class="dt" id="cd" r="6" visibility="hidden"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Gelişim grafiği">${g}<rect x="0" y="0" width="${W}" height="${H}" fill="transparent" id="hit"/></svg><div class="tip" hidden></div>`;
+  const svg = el.querySelector('svg'), tip = el.querySelector('.tip'), cx = el.querySelector('#cx'), cd = el.querySelector('#cd');
+  const show = ev => {
+    const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * (W / r.width);
+    let best = pts[0]; pts.forEach(p => { if (Math.abs(sx(p.x) - x) < Math.abs(sx(best.x) - x)) best = p; });
+    const px = sx(best.x), py = sy(best.y);
+    cx.setAttribute('x1', px); cx.setAttribute('x2', px); cx.setAttribute('visibility', 'visible');
+    cd.setAttribute('cx', px); cd.setAttribute('cy', py); cd.setAttribute('visibility', 'visible');
+    tip.hidden = false; tip.textContent = fmtShort(best.d) + ' · ' + fmtNum(best.y) + ' ' + (opt.unit || '');
+    const left = Math.max(50, Math.min(r.width - 50, px * r.width / W));
+    tip.style.left = left + 'px'; tip.style.top = (py * r.height / H - 10) + 'px';
+  };
+  const hide = () => { tip.hidden = true; cx.setAttribute('visibility','hidden'); cd.setAttribute('visibility','hidden'); };
+  svg.addEventListener('pointerdown', show); svg.addEventListener('pointermove', show);
+  svg.addEventListener('pointerleave', hide); svg.addEventListener('pointercancel', hide);
+}
+
+/* ---------- alt sayfa (form) ---------- */
+let sheetCfg = null;
+function openSheet(cfg){
+  sheetCfg = cfg;
+  $('#sheet').innerHTML = `<div class="sheet-h"><button type="button" class="link" data-act="closeSheet">Vazgeç</button><h2>${esc(cfg.title)}</h2><button type="submit" class="link">${esc(cfg.submit || 'Kaydet')}</button></div>
+    ${cfg.body}${cfg.onDelete ? `<button type="button" class="btn danger" style="margin-top:8px" data-act="sheetDelete">${esc(cfg.deleteText || 'Sil')}</button>` : ''}`;
+  $('#sheetWrap').hidden = false;
+  cfg.onOpen && cfg.onOpen($('#sheet'));
+}
+function closeSheet(){ $('#sheetWrap').hidden = true; $('#sheet').innerHTML = ''; sheetCfg = null; }
+$('#sheet').addEventListener('submit', e => {
+  e.preventDefault();
+  if (!sheetCfg) return;
+  const fd = new FormData(e.target);
+  if (sheetCfg.onSubmit(fd, e.target) === false) return;
+  closeSheet(); save(); render();
+});
+const field = (label, input) => `<div class="field"><label>${label}</label>${input}</div>`;
+
+/* ---------- eylemler ---------- */
+const A = {
+  tab: d => { ui.tab = d.tab; render(); window.scrollTo(0,0); },
+  closeSheet,
+  sheetDelete: () => { if (sheetCfg && sheetCfg.onDelete() !== false){ closeSheet(); save(); render(); } },
+  settings: openSettings,
+  toggleDone: d => {
+    const s = today(), arr = S.done[s] = S.done[s] || [];
+    const i = arr.indexOf(d.id); i >= 0 ? arr.splice(i,1) : arr.push(d.id);
+    Object.keys(S.done).forEach(k => { if (k < ds(new Date(Date.now() - 60*864e5))) delete S.done[k]; });
+    save(); render();
+  },
+  goLog: () => { ui.tab = 'gym'; ui.gymTab = 'log'; render(); window.scrollTo(0,0); },
+  planDay: d => { ui.planDate = d.date; render(); },
+  addItem: () => itemForm(null),
+  editItem: d => itemForm(S.schedule.find(i => i.id === d.id)),
+  bookTab: d => { ui.bookTab = d.k; render(); },
+  addBook: () => bookForm(null),
+  editBook: d => bookForm(S.books.find(b => b.id === d.id)),
+  bookPage: d => pageForm(S.books.find(b => b.id === d.id)),
+  bookStart: d => { const b = S.books.find(x => x.id === d.id); b.status = 'reading'; b.startedAt = b.startedAt || today(); ui.bookTab = 'reading'; save(); render(); },
+  bookFinish: d => {
+    const b = S.books.find(x => x.id === d.id);
+    if (!confirm(`"${b.title}" kitabını bitirdin mi?`)) return;
+    b.status = 'done'; b.finishedAt = today(); if (b.pages) b.current = b.pages; ui.bookTab = 'done'; save(); render();
+  },
+  gymTab: d => { ui.gymTab = d.k; render(); },
+  editSplit: d => splitForm(+d.d),
+  logNew: d => liftForm(null, d.ex || ''),
+  editLog: d => liftForm(S.lifts.find(l => l.id === d.id)),
+  addSet: () => addSetRow($('#setRows')),
+  delSet: (d, el) => { const rows = $('#setRows'); if (rows.children.length > 1){ el.closest('.setrow').remove(); renumber(rows); } },
+  fillName: d => { const i = $('#sheet [name=name]'); if (i) i.value = d.v; },
+  metric: d => { ui.metric = d.k; render(); },
+  range: d => { ui.range = d.k; render(); },
+  saveWeight: () => {
+    const v = num($('#wInput').value);
+    if (v == null || v < 20 || v > 400){ alert('Geçerli bir kilo gir (örn. 78,5).'); return; }
+    const s = today(); S.weights = S.weights.filter(x => x.d !== s); S.weights.push({d:s, kg:v});
+    save(); render();
+  },
+  editWeight: d => weightForm(S.weights.find(x => x.d === d.d)),
+  editGoal: () => openSheet({title:'Hedef kilo', body: field('Hedef (kg)', `<input name="goal" inputmode="decimal" value="${S.goal ? fmtNum(S.goal) : ''}" placeholder="örn. 75">`) + '<div class="hint">Boş bırakırsan hedef kaldırılır.</div>',
+    onSubmit: fd => { S.goal = num(fd.get('goal')); }}),
+  exportData, importData: () => $('#importFile').click(),
+  resetAll: () => {
+    if (!confirm('Tüm veriler silinecek. Emin misin?')) return;
+    if (!confirm('Bu geri alınamaz. Önce yedek almanı öneririm. Yine de silinsin mi?')) return;
+    S = blank(); save(); closeSheet(); render();
+  },
+  theme: d => { try { localStorage.setItem('hayatplan.theme', d.v); } catch(e){} applyTheme(); openSettings(); },
+};
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  if (t.tagName === 'BUTTON' && t.type !== 'submit') e.preventDefault();
+  const f = A[t.dataset.act]; if (f) f(t.dataset, t, e);
+});
+document.addEventListener('change', e => {
+  const t = e.target.closest('[data-change]'); if (!t) return;
+  if (t.dataset.change === 'pickEx'){ ui.ex = t.value; render(); }
+});
+
+/* --- formlar --- */
+function itemForm(it){
+  const isNew = !it;
+  const days = it ? (it.days || []) : [];
+  const repeatOn = it ? !it.date : false;
+  const defStart = (() => { const n = new Date(); return pad((n.getHours()+1)%24)+':00'; })();
+  const body = field('Ne yapacaksın?', `<input name="title" required placeholder="örn. Ders çalış, Spor, Kitap" value="${esc(it ? it.title : '')}">`) +
+    `<div class="two">${field('Başlangıç', `<input type="time" name="start" required value="${esc(it ? it.start : defStart)}">`)}${field('Bitiş', `<input type="time" name="end" required value="${esc(it ? it.end : fmtMin((toMin(defStart)+60)%1440))}">`)}</div>` +
+    `<div class="field"><label>Tekrar</label><div class="chips" style="padding:6px 0 4px">${WEEK.map(d => `<label class="chip"><input type="checkbox" name="days" value="${d}"${days.includes(d) ? ' checked' : ''}><span>${DAY_SHORT[d]}</span></label>`).join('')}</div>
+      <div class="chips" style="padding:6px 0 2px"><button type="button" class="chipbtn" data-act="quickDays" data-v="1,2,3,4,5">Hafta içi</button><button type="button" class="chipbtn" data-act="quickDays" data-v="0,6">Hafta sonu</button><button type="button" class="chipbtn" data-act="quickDays" data-v="0,1,2,3,4,5,6">Her gün</button><button type="button" class="chipbtn" data-act="quickDays" data-v="">Hiç</button></div></div>` +
+    `<div class="hint">Hiçbir gün seçmezsen sadece ${fmtDate(it && it.date ? it.date : ui.planDate || today(), true)} için eklenir.</div>`;
+  openSheet({title: isNew ? 'Yeni etkinlik' : 'Etkinliği düzenle', body,
+    onSubmit: fd => {
+      const title = String(fd.get('title')||'').trim(); if (!title) return false;
+      const ds_ = fd.getAll('days').map(Number);
+      const obj = it || {id:uid()};
+      obj.title = title; obj.start = fd.get('start'); obj.end = fd.get('end');
+      if (ds_.length){ obj.days = ds_; delete obj.date; } else { obj.date = (it && it.date) || ui.planDate || today(); delete obj.days; }
+      if (isNew) S.schedule.push(obj);
+    },
+    onDelete: isNew ? null : () => { if (!confirm('Etkinlik silinsin mi?' + (repeatOn ? ' (Tüm tekrarlarıyla birlikte)' : ''))) return false; S.schedule = S.schedule.filter(x => x !== it); }
+  });
+}
+A.quickDays = d => { const v = d.v ? d.v.split(',') : []; document.querySelectorAll('#sheet [name=days]').forEach(c => c.checked = v.includes(c.value)); };
+
+function bookForm(b){
+  const isNew = !b;
+  const body = field('Kitap adı', `<input name="title" required value="${esc(b ? b.title : '')}">`) +
+    field('Yazar', `<input name="author" value="${esc(b ? b.author : '')}">`) +
+    `<div class="two">${field('Sayfa sayısı', `<input name="pages" inputmode="numeric" value="${b && b.pages ? b.pages : ''}">`)}${field('Durum', `<select name="status">${[['queue','Sırada'],['reading','Okuyorum'],['done','Bitti']].map(([k,v]) => `<option value="${k}"${(b ? b.status : (ui.bookTab === 'done' ? 'queue' : ui.bookTab)) === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`)}</div>`;
+  openSheet({title: isNew ? 'Kitap ekle' : 'Kitabı düzenle', body,
+    onSubmit: fd => {
+      const title = String(fd.get('title')||'').trim(); if (!title) return false;
+      const o = b || {id:uid(), current:0, addedAt:today()};
+      const st = fd.get('status');
+      o.title = title; o.author = String(fd.get('author')||'').trim(); o.pages = parseInt(fd.get('pages')) || null;
+      if (st === 'reading' && !o.startedAt) o.startedAt = today();
+      if (st === 'done' && o.status !== 'done'){ o.finishedAt = today(); if (o.pages) o.current = o.pages; }
+      o.status = st; ui.bookTab = st;
+      if (isNew) S.books.push(o);
+    },
+    onDelete: isNew ? null : () => { if (!confirm('Kitap silinsin mi?')) return false; S.books = S.books.filter(x => x !== b); }
+  });
+}
+function pageForm(b){
+  openSheet({title:'Kaldığın sayfa', body:
+    field(`${esc(b.title)}${b.pages ? ' · '+b.pages+' sayfa' : ''}`, `<input name="cur" inputmode="numeric" value="${b.current || ''}" placeholder="Sayfa">`) +
+    (b.pages ? '' : field('Toplam sayfa (isteğe bağlı)', `<input name="pages" inputmode="numeric">`)),
+    onOpen: f => setTimeout(() => f.querySelector('[name=cur]').select(), 250),
+    onSubmit: fd => {
+      if (fd.get('pages')) b.pages = parseInt(fd.get('pages')) || null;
+      let c = parseInt(fd.get('cur')) || 0; if (b.pages) c = Math.min(c, b.pages);
+      b.current = c;
+      if (b.pages && c >= b.pages && confirm('Son sayfaya geldin. Kitabı bitti olarak işaretleyeyim mi?')){ b.status = 'done'; b.finishedAt = today(); }
+    }});
+}
+function splitForm(d){
+  const sp = S.split[d] || {name:'', ex:[]};
+  const body = field('Bölge / gün adı', `<input name="name" value="${esc(sp.name)}" placeholder="örn. Göğüs">`) +
+    `<div class="chips" style="margin:-2px 0 12px">${PRESETS.map(p => `<button type="button" class="chipbtn" data-act="fillName" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>` +
+    field('Hareketler (her satıra bir tane)', `<textarea name="ex" placeholder="Bench Press&#10;Incline Dumbbell Press">${esc((sp.ex||[]).join('\n'))}</textarea>`);
+  openSheet({title: DAY_LONG[d], body, onSubmit: fd => {
+    S.split[d] = {name: String(fd.get('name')||'').trim() || 'Dinlenme', ex: String(fd.get('ex')||'').split('\n').map(x => x.trim()).filter(Boolean)};
+  }});
+}
+function addSetRow(rows, w='', r='', ph){
+  const div = document.createElement('div'); div.className = 'setrow';
+  div.innerHTML = `<span class="n"></span><input name="w" inputmode="decimal" placeholder="${esc(ph ? fmtNum(ph.w) : 'kg')}" value="${esc(w)}"><input name="r" inputmode="numeric" placeholder="${esc(ph ? ph.r : 'tekrar')}" value="${esc(r)}"><button type="button" data-act="delSet" aria-label="Seti sil">×</button>`;
+  rows.appendChild(div); renumber(rows);
+}
+function renumber(rows){ [...rows.children].forEach((c,i) => c.querySelector('.n').textContent = i+1); }
+function liftForm(l, ex=''){
+  const isNew = !l;
+  const exName = l ? l.ex : ex;
+  const body = field('Tarih', `<input type="date" name="date" value="${l ? l.date : today()}" required>`) +
+    field('Hareket', `<input name="ex" list="exList" required value="${esc(exName)}" placeholder="örn. Bench Press"><datalist id="exList">${allExercises().map(e => `<option value="${esc(e)}">`).join('')}</datalist>`) +
+    `<div class="hint" id="lastHint"></div>
+    <div class="setrow" style="margin-bottom:4px"><span></span><span class="muted tiny">Ağırlık (kg)</span><span class="muted tiny">Tekrar</span><span></span></div>
+    <div id="setRows"></div><button type="button" class="btn ghost sm" data-act="addSet" style="margin:2px 0 14px">+ Set ekle</button>`;
+  openSheet({title: isNew ? 'Hareket kaydet' : 'Kaydı düzenle', body,
+    onOpen: f => {
+      const rows = f.querySelector('#setRows');
+      const updHint = () => {
+        const v = f.querySelector('[name=ex]').value.trim();
+        const last = v ? lastSession(v) : null;
+        f.querySelector('#lastHint').textContent = last && (!l || last.id !== l.id) ? `Son (${fmtShort(last.date)}): ${setsText(last.sets)}` : '';
+        return last;
+      };
+      f.querySelector('[name=ex]').addEventListener('input', updHint);
+      if (l) l.sets.forEach(s => addSetRow(rows, fmtNum(s.w), s.r));
+      else {
+        const last = updHint();
+        const n = last ? last.sets.length : 3;
+        for (let i = 0; i < n; i++) addSetRow(rows, '', '', last ? last.sets[i] : null);
+      }
+      updHint();
+    },
+    onSubmit: fd => {
+      const name = String(fd.get('ex')||'').trim(); if (!name) return false;
+      const known = allExercises().find(e => e.toLowerCase() === name.toLowerCase()) || name;
+      const ws = fd.getAll('w'), rs = fd.getAll('r'), sets = [];
+      ws.forEach((w,i) => { const wn = num(w), rn = parseInt(rs[i]); if (wn != null && rn > 0) sets.push({w:wn, r:rn}); else if (wn == null && rn > 0) sets.push({w:0, r:rn}); });
+      if (!sets.length){ alert('En az bir set için ağırlık ve tekrar gir.'); return false; }
+      const o = l || {id:uid()};
+      o.date = fd.get('date') || today(); o.ex = known; o.sets = sets;
+      if (isNew) S.lifts.push(o);
+      ui.ex = known;
+    },
+    onDelete: isNew ? null : () => { if (!confirm('Kayıt silinsin mi?')) return false; S.lifts = S.lifts.filter(x => x !== l); }
+  });
+}
+function weightForm(x){
+  openSheet({title: fmtDate(x.d), body: field('Kilo (kg)', `<input name="kg" inputmode="decimal" value="${fmtNum(x.kg)}">`) + field('Tarih', `<input type="date" name="d" value="${x.d}">`),
+    onSubmit: fd => { const v = num(fd.get('kg')); if (v == null) return false; const d = fd.get('d') || x.d; S.weights = S.weights.filter(y => y !== x && y.d !== d); S.weights.push({d, kg:v}); },
+    onDelete: () => { if (!confirm('Kayıt silinsin mi?')) return false; S.weights = S.weights.filter(y => y !== x); }
+  });
+}
+function openSettings(){
+  let th = 'auto'; try { th = localStorage.getItem('hayatplan.theme') || 'auto'; } catch(e){}
+  const n = S.schedule.length + S.books.length + S.lifts.length + S.weights.length;
+  openSheet({title:'Ayarlar', submit:'Bitti', body: `
+    <div class="field"><label>Görünüm</label><div class="seg" style="margin:6px 0 4px">${[['auto','Otomatik'],['light','Açık'],['dark','Koyu']].map(([k,v]) => `<button type="button" class="${th === k ? 'on' : ''}" data-act="theme" data-v="${k}">${v}</button>`).join('')}</div></div>
+    <div class="sec" style="font-size:16px;margin-top:16px">Yedekleme</div>
+    <div class="hint" style="margin:0 2px 10px">Verilerin sadece bu telefonda saklanıyor (${n} kayıt). Arada bir yedek alıp Dosyalar'a ya da iCloud'a kaydet.</div>
+    <div class="list"><button type="button" class="row" data-act="exportData"><span class="grow">Yedek al (.json)</span><span class="muted">›</span></button>
+    <button type="button" class="row" data-act="importData"><span class="grow">Yedekten geri yükle</span><span class="muted">›</span></button></div>
+    <div class="list"><button type="button" class="row" data-act="resetAll"><span class="grow" style="color:var(--danger)">Tüm verileri sil</span></button></div>
+    <div class="muted tiny" style="text-align:center">HayatPlan · v1</div>`,
+    onSubmit: () => {}});
+}
+async function exportData(){
+  const name = 'hayatplan-yedek-' + today() + '.json';
+  const text = JSON.stringify(S, null, 2);
+  try {
+    const file = new File([text], name, {type:'application/json'});
+    if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'HayatPlan yedeği'}); return; }
+  } catch(e){ if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'application/json'})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+$('#importFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const o = JSON.parse(await f.text());
+    if (!o || !Array.isArray(o.schedule) || !Array.isArray(o.books)) throw new Error('format');
+    if (!confirm('Mevcut verilerin yedektekilerle değiştirilecek. Devam edilsin mi?')) return;
+    S = Object.assign(blank(), o); save(); closeSheet(); render(); alert('Yedek geri yüklendi.');
+  } catch(err){ alert('Bu dosya geçerli bir HayatPlan yedeği değil.'); }
+});
+function applyTheme(){
+  let th = 'auto'; try { th = localStorage.getItem('hayatplan.theme') || 'auto'; } catch(e){}
+  if (th === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', th);
+}
+
+/* ---------- başlat ---------- */
+applyTheme();
+render();
+setInterval(() => { if (ui.tab === 'today' && $('#sheetWrap').hidden) render(); }, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && $('#sheetWrap').hidden) render(); });
+let rT; window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => { if ($('.chart')) render(); }, 200); });
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
