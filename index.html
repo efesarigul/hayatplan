@@ -12,8 +12,8 @@
 <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon2-180.png">
+<link rel="icon" href="icon2-192.png">
 <style>
 :root{
   color-scheme: light dark;
@@ -325,13 +325,6 @@ function vToday(){
     h += '</div>';
   }
 
-  // Kilo özeti
-  const w = [...S.weights].sort((a,b) => a.d.localeCompare(b.d));
-  const lw = w[w.length-1];
-  h += `<div class="sec">Kilo</div><div class="card"><div class="inline" style="justify-content:space-between">
-      <div><div class="hero" style="font-size:30px">${lw ? fmtNum(lw.kg) : '–'}<small>kg</small></div>
-      <div class="muted tiny">${lw ? (lw.d === s ? 'Bugün tartıldın' : 'Son: '+fmtDate(lw.d)) : 'Henüz kayıt yok'}</div></div>
-      <button class="btn ghost sm" data-act="tab" data-tab="weight">${lw && lw.d === s ? 'Detay' : 'Bugünü gir'}</button></div></div>`;
   return h;
 }
 
