@@ -414,17 +414,32 @@ function calForm(){
     <label class="field" style="display:flex;align-items:center;gap:12px"><span class="grow" style="flex:1">Spor günlerini de ekle<br><span class="muted tiny">Tüm gün etkinliği: "Spor: Omuz" gibi</span></span><input type="checkbox" name="gym" style="width:22px;height:22px;flex:none;accent-color:var(--accent)"${S.calGym ? ' checked' : ''}></label>
     <div class="sec" style="font-size:16px;margin-top:18px">Nasıl çalışır?</div>
     <div class="card small" style="line-height:1.5">
-      1. <b>Aktar</b>'a bas. Açılan ekranda <b>Takvim</b>'i seç ya da dosyayı <b>Dosyalar</b>'a kaydedip oradan aç.<br>
-      2. <b>Tümünü Ekle</b> de ve takvim olarak <b>HayatPlan</b>'ı seç. Önce iPhone Takvim uygulamasında bu adla ayrı bir takvim açmanı öneririm.<br>
-      3. Programını değiştirirsen Takvim'den <b>HayatPlan</b> takvimini silip yeniden oluştur, sonra tekrar aktar. Böylece eski etkinlikler tekrarlanmaz.
+      1. Önce iPhone <b>Takvim</b> uygulamasında <b>HayatPlan</b> adında bir takvim oluştur.<br>
+      2. Yukarıdaki <b>Aktar</b>'a bas. Bir sayfa açılır, oradan <b>Takvime ekle</b>'ye bas.<br>
+      3. <b>Tümünü Ekle</b>'ye bas ve takvim olarak <b>HayatPlan</b>'ı seç.<br>
+      4. Programını değiştirirsen Takvim'den HayatPlan takvimini silip yeniden oluştur, sonra tekrar aktar. Böylece etkinlikler iki kez eklenmez.
+    </div>
+    <div class="sec" style="font-size:16px">Olmazsa: Mail yöntemi</div>
+    <div class="card small" style="line-height:1.5">
+      Dosyayı kendine mail at. Mail uygulamasında eke dokununca <b>Tümünü Ekle</b> çıkar.
+      <button type="button" class="btn ghost sm" style="margin-top:10px" data-act="calShare">Dosyayı paylaş / Mail'e gönder</button>
     </div>`,
-    onSubmit: fd => {
-      S.calAlarm = parseInt(fd.get('alarm')); S.calGym = !!fd.get('gym');
-      const {text, count} = buildIcs(S.calAlarm, S.calGym);
-      if (!count){ alert('Aktarılacak etkinlik yok.'); return false; }
-      S.calExportAt = new Date().toISOString();
-      shareIcs(text);
+    onSubmit: (fd, form) => {
+      const ics = calFromForm(form); if (!ics) return false;
+      const bytes = new TextEncoder().encode(ics);
+      let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
+      const url = new URL('takvim.html', location.href).href + '#ics=' + btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      const w = window.open(url, '_blank');
+      if (!w) location.href = url;
     }});
+}
+function calFromForm(form){
+  const fd = new FormData(form);
+  S.calAlarm = parseInt(fd.get('alarm')); S.calGym = !!fd.get('gym');
+  const {text, count} = buildIcs(S.calAlarm, S.calGym);
+  if (!count){ alert('Aktarılacak etkinlik yok.'); return null; }
+  S.calExportAt = new Date().toISOString(); save();
+  return text;
 }
 async function shareIcs(text){
   const name = 'HayatPlan.ics';
@@ -668,6 +683,7 @@ const A = {
   addItem: () => itemForm(null),
   editItem: d => itemForm(S.schedule.find(i => i.id === d.id)),
   calExport: calForm,
+  calShare: () => { const t = calFromForm($('#sheet')); if (t) shareIcs(t); },
   bookTab: d => { ui.bookTab = d.k; render(); },
   addBook: () => bookForm(null),
   editBook: d => bookForm(S.books.find(b => b.id === d.id)),

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HayatPlan Takvim</title>
+<meta name="robots" content="noindex">
+<style>
+:root{color-scheme:light dark;--bg:#F2F2F7;--card:#FFFFFF;--ink:#1C1C1E;--ink2:#6B6B70;--accent:#4F46E5;--accent-soft:rgba(79,70,229,.10);--shadow:0 1px 3px rgba(0,0,0,.10)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#000;--card:#1C1C1E;--ink:#F2F2F7;--ink2:#A1A1A6;--accent:#7C7AF0;--accent-soft:rgba(124,122,240,.16);--shadow:none}}
+:root[data-theme="dark"]{--bg:#000;--card:#1C1C1E;--ink:#F2F2F7;--ink2:#A1A1A6;--accent:#7C7AF0;--accent-soft:rgba(124,122,240,.16);--shadow:none}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 24px) 16px calc(env(safe-area-inset-bottom) + 24px)}
+h1{font-size:28px;letter-spacing:-.02em;margin:0 0 4px}
+.sub{color:var(--ink2);margin-bottom:20px}
+.card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:14px 16px;font:inherit;font-weight:600;text-align:center;text-decoration:none;background:var(--accent);color:#fff;cursor:pointer}
+.btn.ghost{background:var(--accent-soft);color:var(--accent);margin-top:10px}
+ol{margin:0;padding-left:20px} li{margin:4px 0}
+.muted{color:var(--ink2);font-size:14px}
+.err{color:#D93025}
+</style>
+</head>
+<body>
+<main>
+  <h1>Takvime ekle</h1>
+  <div class="sub" id="info">Hazırlanıyor…</div>
+  <div class="card">
+    <button class="btn" id="add">Takvime ekle</button>
+    <button class="btn ghost" id="dl">Dosyayı indir</button>
+  </div>
+  <div class="card muted">
+    <ol>
+      <li><b>Takvime ekle</b>'ye bas. iPhone etkinlikleri listeleyen bir ekran açar.</li>
+      <li><b>Tümünü Ekle</b>'ye bas ve takvim olarak <b>HayatPlan</b>'ı seç.</li>
+      <li>Bitince bu sayfayı kapatıp uygulamaya dön.</li>
+    </ol>
+    <p style="margin:10px 0 0">Ekleme ekranı açılmazsa bu sayfanın <b>Safari</b>'de açık olduğundan emin ol. Sağ alttaki pusula simgesine dokunarak Safari'de açabilirsin.</p>
+  </div>
+  <a class="btn ghost" href="./">Uygulamaya dön</a>
+</main>
+<script>
+// Takvim verisi adresin # kısmında gelir; # kısmı sunucuya hiç gönderilmez, sadece bu telefonda kalır.
+let ics = '';
+try {
+  const m = location.hash.match(/ics=([A-Za-z0-9_-]+)/);
+  if (m) {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b64 + '==='.slice((b64.length + 3) % 4));
+    ics = new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+  }
+} catch (e) { ics = ''; }
+const info = document.getElementById('info');
+if (!ics.startsWith('BEGIN:VCALENDAR')) {
+  info.innerHTML = '<span class="err">Takvim verisi bulunamadı.</span> HayatPlan uygulamasında Plan → Takvime aktar\'dan tekrar dene.';
+  document.getElementById('add').disabled = true; document.getElementById('dl').disabled = true;
+} else {
+  const n = (ics.match(/BEGIN:VEVENT/g) || []).length;
+  info.textContent = n + ' etkinlik eklenmeye hazır.';
+}
+document.getElementById('add').onclick = () => {
+  location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+};
+document.getElementById('dl').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([ics], {type: 'text/calendar'}));
+  a.download = 'HayatPlan.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+};
+</script>
+</body>
+</html>

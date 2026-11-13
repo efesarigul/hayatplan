@@ -1,5 +1,5 @@
 // HayatPlan çevrimdışı önbellek. Uygulamayı güncellediğinde VERSION'u artır.
-const VERSION = 'hayatplan-v2';
+const VERSION = 'hayatplan-v3';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -11,9 +11,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  const url = new URL(req.url);
   if (req.mode === 'navigate') {
-    // Sayfa: önce internet (güncelleme gelsin), yoksa önbellek
-    e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy)); return r; })
+    const isApp = url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
+    if (!isApp) return; // takvim.html gibi diğer sayfalar: doğrudan internetten
+    // Ana sayfa: önce internet (güncelleme gelsin), yoksa önbellek
+    e.respondWith(fetch(req).then(r => { if (r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy)); } return r; })
       .catch(() => caches.match('./index.html')));
     return;
   }
