@@ -106,6 +106,13 @@ main{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 10px)
 .chipbtn.on{background:var(--accent-soft);color:var(--accent);box-shadow:none}
 .exlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .exlist span{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--bg);color:var(--ink2)}
+div.row:active{opacity:1}
+.rbody{flex:1;min-width:0;border:0;background:none;text-align:left;padding:0;color:inherit}
+.ord{display:flex;flex-direction:column;gap:6px;flex:none}
+.ord button{border:0;background:var(--bg);color:var(--ink2);width:36px;height:32px;border-radius:9px;display:grid;place-items:center;padding:0}
+.ord svg{width:18px;height:18px}
+.ord button:disabled{opacity:.3;cursor:default}
+.rbody:active,.ord button:not(:disabled):active{opacity:.6}
 .sets{font-size:14px;color:var(--ink2);font-variant-numeric:tabular-nums}
 .chart{position:relative;margin-top:4px}
 .chart svg{display:block;width:100%;touch-action:pan-y;overflow:visible}
@@ -174,19 +181,45 @@ const DAY_LONG  = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','
 const DAY_SHORT = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
 const WEEK = [1,2,3,4,5,6,0];
 const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-const PRESETS = ['Göğüs','Sırt','Omuz','Kol','Bacak','Göğüs + Arka kol','Sırt + Ön kol','Full Body','Kardiyo','Dinlenme'];
-const DEF_SPLIT = {
-  1:{name:'Göğüs', ex:['Bench Press','Incline Dumbbell Press','Cable Fly']},
-  2:{name:'Sırt',  ex:['Barfiks','Barbell Row','Lat Pulldown']},
-  3:{name:'Bacak', ex:['Squat','Leg Press','Romanian Deadlift']},
-  4:{name:'Omuz',  ex:['Overhead Press','Lateral Raise','Rear Delt Fly']},
-  5:{name:'Kol',   ex:['Barbell Curl','Triceps Pushdown','Hammer Curl']},
-  6:{name:'Dinlenme', ex:[]},
-  0:{name:'Dinlenme', ex:[]}
-};
-function blank(){ return {schedule:[], done:{}, books:[], split:JSON.parse(JSON.stringify(DEF_SPLIT)), lifts:[], weights:[], goal:null, calAlarm:5, calGym:true, calExportAt:null, schedChangedAt:null}; }
+const PRESETS = ['Göğüs','Sırt','Omuz','Kol','Bacak','Göğüs + Arka kol','Sırt + Ön kol','Full Body','Kardiyo'];
+const DEF_ROT = [
+  {name:'Göğüs', ex:['Bench Press','Incline Dumbbell Press','Cable Fly']},
+  {name:'Sırt',  ex:['Barfiks','Barbell Row','Lat Pulldown']},
+  {name:'Bacak', ex:['Squat','Leg Press','Romanian Deadlift']},
+  {name:'Omuz',  ex:['Overhead Press','Lateral Raise','Rear Delt Fly']},
+  {name:'Kol',   ex:['Barbell Curl','Triceps Pushdown','Hammer Curl']}
+];
+const rid = () => Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2,8);
+function base(){ return {schedule:[], done:{}, books:[], lifts:[], weights:[], goal:null, calAlarm:5, calExportAt:null, schedChangedAt:null, gymDays:{}, gymPick:null}; }
+function rotAfter(s, id){ if (!s.rot.length) return null; const i = s.rot.findIndex(x => x.id === id); return s.rot[(i + 1) % s.rot.length].id; }
+// Spor programı sıralı döngüdür: rot = sıra, rotNext = sıradaki, gymDays[tarih] = o gün yapılan bölge
+function init(o){
+  const s = Object.assign(base(), o || {});
+  if (!s.gymDays || typeof s.gymDays !== 'object') s.gymDays = {};
+  if (!Array.isArray(s.rot)){
+    // Eski haftalık programdan (split) sıraya geçiş; geçmiş kayıtlara o günün bölgesi yazılır
+    s.rot = [];
+    const byDow = {};
+    if (s.split && typeof s.split === 'object'){
+      WEEK.forEach(d => {
+        const sp = s.split[d];
+        if (sp && sp.name && !/dinlen/i.test(sp.name)){ const w = {id:rid(), name:sp.name, ex:[...(sp.ex||[])]}; s.rot.push(w); byDow[d] = w; }
+      });
+      [...new Set((s.lifts||[]).map(l => l.date))].forEach(dt => {
+        const [y,m,d] = dt.split('-').map(Number), w = byDow[new Date(y, m-1, d).getDay()];
+        if (w && !s.gymDays[dt]) s.gymDays[dt] = {id:w.id, name:w.name};
+      });
+    }
+    if (!s.rot.length) s.rot = DEF_ROT.map(x => ({id:rid(), name:x.name, ex:[...x.ex]}));
+    const last = Object.keys(s.gymDays).sort().pop();
+    s.rotNext = last ? rotAfter(s, s.gymDays[last].id) : s.rot[0].id;
+  }
+  if (!s.rot.some(x => x.id === s.rotNext)) s.rotNext = s.rot.length ? s.rot[0].id : null;
+  return s;
+}
+const blank = () => init();
 function load(){
-  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && typeof s === 'object') return Object.assign(blank(), s); } catch(e){}
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && typeof s === 'object') return init(s); } catch(e){}
   return blank();
 }
 let S = load();
@@ -215,7 +248,9 @@ const fmtShort = s => { const d = parseDs(s); return d.getDate()+' '+MONTHS[d.ge
 const dur = m => m < 60 ? m+' dk' : Math.floor(m/60)+' sa'+(m%60 ? ' '+(m%60)+' dk' : '');
 const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const ICON_GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
-const ICON_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+const ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
+const ICON_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+const ICON_PLUS ='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 
 function itemsFor(s){
   const dow = parseDs(s).getDay();
@@ -235,7 +270,7 @@ function readingBooks(){ return S.books.filter(b => b.status === 'reading'); }
 function liftsOn(s){ return S.lifts.filter(l => l.date === s); }
 function allExercises(){
   const set = new Map();
-  Object.values(S.split).forEach(d => (d.ex||[]).forEach(e => set.set(e.toLowerCase(), e)));
+  S.rot.forEach(w => (w.ex||[]).forEach(e => set.set(e.toLowerCase(), e)));
   S.lifts.forEach(l => set.set(l.ex.toLowerCase(), l.ex));
   return [...set.values()].sort((a,b) => a.localeCompare(b,'tr'));
 }
@@ -245,7 +280,31 @@ function lastSession(ex, beforeDate){
                    .sort((a,b) => (b.date+b.id).localeCompare(a.date+a.id))[0];
   return l || null;
 }
-const setsText = sets => sets.map(s => fmtNum(s.w)+'×'+s.r).join('  ·  ');
+/* --- spor sırası --- */
+const rotGet = id => S.rot.find(x => x.id === id) || null;
+// Bugünün antrenmanı: bugün yapıldıysa o, bugün için seçildiyse o, değilse sıradaki
+function gymToday(){
+  const s = today(), g = S.gymDays[s];
+  if (g && rotGet(g.id)) return {w: rotGet(g.id), done: true};
+  const pick = S.gymPick && S.gymPick.date === s ? rotGet(S.gymPick.id) : null;
+  return {w: pick || rotGet(S.rotNext), done: false, picked: !!pick};
+}
+function gymMark(date, id, auto){
+  if (S.gymDays[date]) gymUnmark(date);
+  const w = rotGet(id); if (!w) return;
+  S.gymDays[date] = {id, name: w.name, prevNext: S.rotNext, auto: !!auto};
+  S.rotNext = rotAfter(S, id);
+}
+function gymUnmark(date){
+  const g = S.gymDays[date]; if (!g) return;
+  delete S.gymDays[date];
+  // Sıra o işaretten sonra elle değiştirilmediyse eski haline döner
+  if (S.rotNext === rotAfter(S, g.id)) S.rotNext = rotGet(g.prevNext) ? g.prevNext : (rotGet(g.id) ? g.id : S.rotNext);
+}
+function gymName(date){ const g = S.gymDays[date]; if (!g) return ''; const w = rotGet(g.id); return w ? w.name : (g.name || ''); }
+function lastDoneMap(){ const m = {}; Object.keys(S.gymDays).sort().forEach(d => m[S.gymDays[d].id] = d); return m; }
+function daysAgo(dt){ const n = Math.round((parseDs(today()) - parseDs(dt)) / 864e5); return n <= 0 ? 'bugün' : n === 1 ? 'dün' : n + ' gün önce'; }
+const setsText = sets =>sets.map(s => fmtNum(s.w)+'×'+s.r).join('  ·  ');
 
 /* ---------- render ---------- */
 const VIEWS = {today:vToday, plan:vPlan, books:vBooks, gym:vGym, weight:vWeight};
@@ -293,8 +352,7 @@ function vToday(){
 
   // Kitap + Spor
   const rb = readingBooks()[0];
-  const sp = S.split[now.getDay()] || {name:'Dinlenme', ex:[]};
-  const rest = /dinlen/i.test(sp.name);
+  const gt = gymToday(), sp = gt.w;
   const logged = liftsOn(s).length;
   h += '<div class="grid2">';
   if (rb){
@@ -308,9 +366,14 @@ function vToday(){
     h += `<div class="card mini"><div class="label">Okuduğum</div><div class="big muted">Kitap yok</div><div class="grow"></div>
       <button class="btn ghost sm" data-act="tab" data-tab="books">Kitap ekle</button></div>`;
   }
-  h += `<div class="card mini"><div class="label">Spor · ${DAY_SHORT[now.getDay()]}</div><div class="big">${esc(sp.name)}</div>
-    <div class="muted small grow">${rest ? 'Dinlenme günü' : `${(sp.ex||[]).length} hareket`}${logged ? ` · ${logged} kayıt` : ''}</div>
-    ${rest ? '' : `<button class="btn ghost sm" style="margin-top:10px" data-act="goLog">${logged ? 'Devam et' : 'Başla'}</button>`}</div>`;
+  if (sp){
+    h += `<div class="card mini"><div class="label">Spor · ${gt.done ? 'Bugün ✓' : gt.picked ? 'Bugün' : 'Sıradaki'}</div><div class="big">${esc(sp.name)}</div>
+      <div class="muted small grow">${gt.done ? 'Yapıldı' : `${(sp.ex||[]).length} hareket`}${logged ? ` · ${logged} kayıt` : ''}</div>
+      <button class="btn ghost sm" style="margin-top:10px" data-act="goLog">${logged || gt.done ? 'Devam et' : 'Başla'}</button></div>`;
+  } else {
+    h += `<div class="card mini"><div class="label">Spor</div><div class="big muted">Program yok</div><div class="grow"></div>
+      <button class="btn ghost sm" data-act="goProgram">Program oluştur</button></div>`;
+  }
   h += '</div>';
 
   // Program listesi
@@ -372,7 +435,7 @@ function icsFold(line){
   while (s.length > 70){ out.push(s.slice(0,70)); s = ' ' + s.slice(70); }
   out.push(s); return out.join('\r\n');
 }
-function buildIcs(alarm, withGym){
+function buildIcs(alarm){
   const now = new Date(), t0 = parseDs(today());
   const stamp = now.toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
   const L = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//HayatPlan//TR','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:HayatPlan'];
@@ -388,15 +451,6 @@ function buildIcs(alarm, withGym){
     if (!i.date) L.push('RRULE:FREQ=WEEKLY;BYDAY=' + WEEK.filter(d => i.days.includes(d)).map(d => ICS_DAY[d]).join(','));
     L.push(...alarmLines(i.title), 'END:VEVENT'); n++;
   });
-  if (withGym){
-    WEEK.forEach(d => {
-      const sp = S.split[d]; if (!sp || /dinlen/i.test(sp.name)) return;
-      const start = firstOn([d]), end = new Date(start); end.setDate(end.getDate()+1);
-      L.push('BEGIN:VEVENT','UID:gym-'+d+'@hayatplan','DTSTAMP:'+stamp,'SUMMARY:'+icsEsc('Spor: '+sp.name),
-        'DTSTART;VALUE=DATE:'+icsDate(start),'DTEND;VALUE=DATE:'+icsDate(end),'RRULE:FREQ=WEEKLY;BYDAY='+ICS_DAY[d],
-        'DESCRIPTION:'+icsEsc((sp.ex||[]).join('\n')),'TRANSP:TRANSPARENT','END:VEVENT'); n++;
-    });
-  }
   L.push('END:VCALENDAR');
   return {text: L.map(icsFold).join('\r\n') + '\r\n', count: n};
 }
@@ -404,7 +458,6 @@ function calForm(){
   const opts = [[-1,'Bildirim yok'],[0,'Başladığında'],[5,'5 dk önce'],[10,'10 dk önce'],[15,'15 dk önce'],[30,'30 dk önce']];
   openSheet({title:'Takvime aktar', submit:'Aktar', body: `
     ${field('Bildirim', `<select name="alarm">${opts.map(([v,l]) => `<option value="${v}"${S.calAlarm === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
-    <label class="field" style="display:flex;align-items:center;gap:12px"><span class="grow" style="flex:1">Spor günlerini de ekle<br><span class="muted tiny">Tüm gün etkinliği: "Spor: Omuz" gibi</span></span><input type="checkbox" name="gym" style="width:22px;height:22px;flex:none;accent-color:var(--accent)"${S.calGym ? ' checked' : ''}></label>
     <div class="sec" style="font-size:16px;margin-top:18px">Nasıl çalışır?</div>
     <div class="card small" style="line-height:1.5">
       1. Önce iPhone <b>Takvim</b> uygulamasında <b>HayatPlan</b> adında bir takvim oluştur.<br>
@@ -428,8 +481,8 @@ function calForm(){
 }
 function calFromForm(form){
   const fd = new FormData(form);
-  S.calAlarm = parseInt(fd.get('alarm')); S.calGym = !!fd.get('gym');
-  const {text, count} = buildIcs(S.calAlarm, S.calGym);
+  S.calAlarm = parseInt(fd.get('alarm'));
+  const {text, count} = buildIcs(S.calAlarm);
   if (!count){ alert('Aktarılacak etkinlik yok.'); return null; }
   S.calExportAt = new Date().toISOString(); save();
   return text;
@@ -481,32 +534,46 @@ function vGym(){
   let h = header('Spor', 'Program, kayıt ve gelişim');
   const tabs = {program:'Program', log:'Kayıt', progress:'Gelişim'};
   h += '<div class="seg">' + Object.entries(tabs).map(([k,v]) => `<button class="${ui.gymTab === k ? 'on' : ''}" data-act="gymTab" data-k="${k}">${v}</button>`).join('') + '</div>';
-  const dow = new Date().getDay();
-
   if (ui.gymTab === 'program'){
-    h += '<div class="list">';
-    WEEK.forEach(d => {
-      const sp = S.split[d] || {name:'Dinlenme', ex:[]};
-      h += `<button class="row${d === dow ? ' cur' : ''}" data-act="editSplit" data-d="${d}" style="align-items:flex-start">
-        <span class="time" style="padding-top:1px">${DAY_LONG[d]}</span>
-        <span class="grow"><span class="t">${esc(sp.name)}</span>${(sp.ex||[]).length ? `<div class="exlist">${sp.ex.map(e => `<span>${esc(e)}</span>`).join('')}</div>` : ''}</span></button>`;
-    });
-    h += '</div><div class="muted tiny" style="text-align:center">Bir güne dokunarak bölgeyi ve hareketleri değiştir.</div>';
+    h += `<div class="hint" style="margin:0 2px 10px">Gün yok, sıra var. Hangi gün gidersen git sıradaki bölge gelir; gidemediğin gün sıra bekler.</div>`;
+    if (!S.rot.length) h += `<div class="card empty"><b>Sıra boş</b>Çalıştığın bölgeleri yapacağın sırayla ekle.</div>`;
+    else {
+      const last = lastDoneMap();
+      h += '<div class="list">';
+      S.rot.forEach((w, i) => {
+        const nx = w.id === S.rotNext;
+        h += `<div class="row${nx ? ' cur' : ''}" style="align-items:flex-start;padding-right:10px">
+          <button class="rbody" data-act="editRot" data-id="${w.id}">
+            <span class="t">${i+1}. ${esc(w.name)}</span>${nx ? ' <span class="pill">Sıradaki</span>' : ''}
+            <div class="muted tiny" style="margin-top:2px">${last[w.id] ? 'Son: ' + daysAgo(last[w.id]) : 'Henüz yapılmadı'}</div>
+            ${(w.ex||[]).length ? `<div class="exlist">${w.ex.map(e => `<span>${esc(e)}</span>`).join('')}</div>` : ''}
+          </button>
+          <span class="ord"><button data-act="rotMove" data-id="${w.id}" data-dir="-1" aria-label="Yukarı taşı"${i === 0 ? ' disabled' : ''}>${ICON_UP}</button><button data-act="rotMove" data-id="${w.id}" data-dir="1" aria-label="Aşağı taşı"${i === S.rot.length-1 ? ' disabled' : ''}>${ICON_DOWN}</button></span>
+        </div>`;
+      });
+      h += '</div>';
+    }
+    h += `<button class="btn ghost" data-act="addRot" style="margin-bottom:10px">+ Bölge ekle</button>
+      <div class="muted tiny" style="text-align:center">Dokunarak düzenle, oklarla sırayı değiştir.</div>`;
   }
 
   if (ui.gymTab === 'log'){
-    const s = today(), sp = S.split[dow] || {name:'Dinlenme', ex:[]};
+    const s = today(), gt = gymToday(), sp = gt.w || {name:'Program yok', ex:[]};
     const todays = liftsOn(s).map(l => l.ex.toLowerCase());
-    h += `<div class="card"><div class="label">Bugün · ${DAY_LONG[dow]}</div><div style="font-size:22px;font-weight:700;margin:4px 0 10px">${esc(sp.name)}</div>`;
+    h += `<div class="card"><div class="label">Bugün · ${gt.done ? 'Tamamlandı ✓' : gt.picked ? 'Senin seçimin' : 'Sıradaki'}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 10px"><div style="font-size:22px;font-weight:700;overflow-wrap:anywhere">${esc(sp.name)}</div>${S.rot.length > 1 ? '<button class="link" data-act="gymPick" style="flex:none">Değiştir</button>' : ''}</div>`;
     if ((sp.ex||[]).length){
       h += '<div class="chips" style="margin-bottom:12px">' + sp.ex.map(e =>
         `<button class="chipbtn${todays.includes(e.toLowerCase()) ? ' on' : ''}" data-act="logNew" data-ex="${esc(e)}">${todays.includes(e.toLowerCase()) ? '✓ ' : '+ '}${esc(e)}</button>`).join('') + '</div>';
     }
-    h += `<button class="btn" data-act="logNew">Hareket kaydet</button></div>`;
+    h += `<button class="btn" data-act="logNew">Hareket kaydet</button>`;
+    if (gt.w) h += `<button class="btn ghost" style="margin-top:8px" data-act="gymDone">${gt.done ? 'Tamamlandı işaretini kaldır' : 'Antrenmanı tamamla'}</button>
+      ${gt.done ? '' : '<div class="muted tiny" style="text-align:center;margin-top:8px">Hareket kaydettiğinde otomatik tamamlanır ve sıra ilerler.</div>'}`;
+    h += '</div>';
     const dates = [...new Set(S.lifts.map(l => l.date))].sort().reverse().slice(0, 40);
     if (!dates.length) h += `<div class="card empty"><b>Henüz kayıt yok</b>Yaptığın hareketi, kaldırdığın ağırlığı ve tekrar sayısını kaydet. Gelişim sekmesinde grafiğini görürsün.</div>`;
     dates.forEach(d => {
-      h += `<div class="sec" style="font-size:16px">${d === s ? 'Bugün' : fmtDate(d, true)}<span class="muted small">${esc((S.split[parseDs(d).getDay()]||{}).name||'')}</span></div><div class="list">`;
+      h += `<div class="sec" style="font-size:16px">${d === s ? 'Bugün' : fmtDate(d, true)}<span class="muted small">${esc(gymName(d))}</span></div><div class="list">`;
       S.lifts.filter(l => l.date === d).forEach(l => {
         h += `<button class="row" data-act="editLog" data-id="${l.id}"><span class="grow"><span class="t">${esc(l.ex)}</span><br><span class="sets">${setsText(l.sets)}</span></span></button>`;
       });
@@ -688,7 +755,25 @@ const A = {
     b.status = 'done'; b.finishedAt = today(); if (b.pages) b.current = b.pages; ui.bookTab = 'done'; save(); render();
   },
   gymTab: d => { ui.gymTab = d.k; render(); },
-  editSplit: d => splitForm(+d.d),
+  goProgram: () => { ui.tab = 'gym'; ui.gymTab = 'program'; render(); window.scrollTo(0,0); },
+  editRot: d => rotForm(rotGet(d.id)),
+  addRot: () => rotForm(null),
+  rotMove: d => {
+    const i = S.rot.findIndex(x => x.id === d.id), j = i + Number(d.dir);
+    if (i < 0 || j < 0 || j >= S.rot.length) return;
+    [S.rot[i], S.rot[j]] = [S.rot[j], S.rot[i]]; save(); render();
+  },
+  gymPick: pickForm,
+  gymPickSet: d => {
+    const s = today();
+    if (S.gymDays[s]) gymMark(s, d.id, S.gymDays[s].auto); else S.gymPick = {date:s, id:d.id};
+    closeSheet(); save(); render();
+  },
+  gymDone: () => {
+    const s = today(), gt = gymToday();
+    if (gt.done) gymUnmark(s); else if (gt.w) gymMark(s, gt.w.id, false);
+    save(); render();
+  },
   logNew: d => liftForm(null, d.ex || ''),
   editLog: d => liftForm(S.lifts.find(l => l.id === d.id)),
   addSet: () => addSetRow($('#setRows')),
@@ -780,14 +865,33 @@ function pageForm(b){
       if (b.pages && c >= b.pages && confirm('Son sayfaya geldin. Kitabı bitti olarak işaretleyeyim mi?')){ b.status = 'done'; b.finishedAt = today(); }
     }});
 }
-function splitForm(d){
-  const sp = S.split[d] || {name:'', ex:[]};
-  const body = field('Bölge / gün adı', `<input name="name" value="${esc(sp.name)}" placeholder="örn. Göğüs">`) +
+function rotForm(w){
+  const isNew = !w;
+  const body = field('Bölge adı', `<input name="name" required value="${esc(w ? w.name : '')}" placeholder="örn. Göğüs">`) +
     `<div class="chips" style="margin:-2px 0 12px">${PRESETS.map(p => `<button type="button" class="chipbtn" data-act="fillName" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>` +
-    field('Hareketler (her satıra bir tane)', `<textarea name="ex" placeholder="Bench Press&#10;Incline Dumbbell Press">${esc((sp.ex||[]).join('\n'))}</textarea>`);
-  openSheet({title: DAY_LONG[d], body, onSubmit: fd => {
-    S.split[d] = {name: String(fd.get('name')||'').trim() || 'Dinlenme', ex: String(fd.get('ex')||'').split('\n').map(x => x.trim()).filter(Boolean)};
-  }});
+    field('Hareketler (her satıra bir tane)', `<textarea name="ex" placeholder="Bench Press&#10;Incline Dumbbell Press">${esc(w ? (w.ex||[]).join('\n') : '')}</textarea>`) +
+    (w && w.id === S.rotNext ? '' : `<label class="field" style="display:flex;align-items:center;gap:12px"><span style="flex:1">Sıradaki bu olsun<br><span class="muted tiny">Bir sonraki antrenmanda bu bölge gelir</span></span><input type="checkbox" name="next" style="width:22px;height:22px;flex:none;accent-color:var(--accent)"></label>`);
+  openSheet({title: isNew ? 'Bölge ekle' : 'Bölgeyi düzenle', body,
+    onSubmit: fd => {
+      const name = String(fd.get('name')||'').trim(); if (!name) return false;
+      const o = w || {id:uid()};
+      o.name = name; o.ex = String(fd.get('ex')||'').split('\n').map(x => x.trim()).filter(Boolean);
+      if (isNew) S.rot.push(o);
+      if (fd.get('next') || !rotGet(S.rotNext)) S.rotNext = o.id;
+    },
+    onDelete: isNew ? null : () => {
+      if (!confirm(`"${w.name}" sıradan çıkarılsın mı? Geçmiş kayıtların silinmez.`)) return false;
+      if (S.rotNext === w.id) S.rotNext = S.rot.length > 1 ? rotAfter(S, w.id) : null;
+      S.rot = S.rot.filter(x => x !== w);
+    }, deleteText:'Sıradan çıkar'
+  });
+}
+function pickForm(){
+  const gt = gymToday(), last = lastDoneMap();
+  openSheet({title:'Bugün ne çalışacaksın?', submit:'Kapat', body:
+    `<div class="hint" style="margin:0 2px 10px">Seçtiğin bölgeyi tamamlayınca sıra onun arkasından devam eder.</div><div class="list">` +
+    S.rot.map(w => `<button type="button" class="row${gt.w && gt.w.id === w.id ? ' cur' : ''}" data-act="gymPickSet" data-id="${w.id}"><span class="grow"><span class="t">${esc(w.name)}</span>${w.id === S.rotNext ? ' <span class="pill">Sıradaki</span>' : ''}<br><span class="muted tiny">${last[w.id] ? 'Son: ' + daysAgo(last[w.id]) : 'Henüz yapılmadı'}</span></span>${gt.w && gt.w.id === w.id ? '<span style="color:var(--accent);font-weight:700">✓</span>' : ''}</button>`).join('') + '</div>',
+    onSubmit: () => {}});
 }
 function addSetRow(rows, w='', r='', ph){
   const div = document.createElement('div'); div.className = 'setrow';
@@ -831,8 +935,15 @@ function liftForm(l, ex=''){
       o.date = fd.get('date') || today(); o.ex = known; o.sets = sets;
       if (isNew) S.lifts.push(o);
       ui.ex = known;
+      // Bugüne ilk hareket kaydedilince günün antrenmanı tamamlanmış sayılır, sıra ilerler
+      if (o.date === today() && !S.gymDays[o.date]){ const gt = gymToday(); if (gt.w) gymMark(o.date, gt.w.id, true); }
     },
-    onDelete: isNew ? null : () => { if (!confirm('Kayıt silinsin mi?')) return false; S.lifts = S.lifts.filter(x => x !== l); }
+    onDelete: isNew ? null : () => {
+      if (!confirm('Kayıt silinsin mi?')) return false;
+      S.lifts = S.lifts.filter(x => x !== l);
+      const g = S.gymDays[l.date];
+      if (l.date === today() && g && g.auto && !liftsOn(l.date).length) gymUnmark(l.date);
+    }
   });
 }
 function weightForm(x){
@@ -870,7 +981,7 @@ $('#importFile').addEventListener('change', async e => {
     const o = JSON.parse(await f.text());
     if (!o || !Array.isArray(o.schedule) || !Array.isArray(o.books)) throw new Error('format');
     if (!confirm('Mevcut verilerin yedektekilerle değiştirilecek. Devam edilsin mi?')) return;
-    S = Object.assign(blank(), o); save(); closeSheet(); render(); alert('Yedek geri yüklendi.');
+    S = init(o); save(); closeSheet(); render(); alert('Yedek geri yüklendi.');
   } catch(err){ alert('Bu dosya geçerli bir HayatPlan yedeği değil.'); }
 });
 function applyTheme(){
