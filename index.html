@@ -113,6 +113,8 @@ div.row:active{opacity:1}
 .ord svg{width:18px;height:18px}
 .ord button:disabled{opacity:.3;cursor:default}
 .rbody:active,.ord button:not(:disabled):active{opacity:.6}
+.maxv{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;flex:none}
+.maxv small{font-size:13px;color:var(--ink2);font-weight:600;margin-left:3px}
 .sets{font-size:14px;color:var(--ink2);font-variant-numeric:tabular-nums}
 .chart{position:relative;margin-top:4px}
 .chart svg{display:block;width:100%;touch-action:pan-y;overflow:visible}
@@ -196,6 +198,8 @@ function rotAfter(s, id){ if (!s.rot.length) return null; const i = s.rot.findIn
 function init(o){
   const s = Object.assign(base(), o || {});
   if (!s.gymDays || typeof s.gymDays !== 'object') s.gymDays = {};
+  // Kayıtlar yalnızca maks ağırlık tutar; eski set/tekrar kayıtlarında en ağır set maks sayılır
+  (s.lifts || []).forEach(l => { if (l.max == null) l.max = Math.max(0, ...(l.sets || []).map(x => x.w || 0)); });
   if (!Array.isArray(s.rot)){
     // Eski haftalık programdan (split) sıraya geçiş; geçmiş kayıtlara o günün bölgesi yazılır
     s.rot = [];
@@ -304,7 +308,11 @@ function gymUnmark(date){
 function gymName(date){ const g = S.gymDays[date]; if (!g) return ''; const w = rotGet(g.id); return w ? w.name : (g.name || ''); }
 function lastDoneMap(){ const m = {}; Object.keys(S.gymDays).sort().forEach(d => m[S.gymDays[d].id] = d); return m; }
 function daysAgo(dt){ const n = Math.round((parseDs(today()) - parseDs(dt)) / 864e5); return n <= 0 ? 'bugün' : n === 1 ? 'dün' : n + ' gün önce'; }
-const setsText = sets =>sets.map(s => fmtNum(s.w)+'×'+s.r).join('  ·  ');
+function liftsOf(ex){ const k = ex.toLowerCase(); return S.lifts.filter(l => l.ex.toLowerCase() === k).sort((a,b) => (b.date+b.id).localeCompare(a.date+a.id)); }
+function maxRow(e){
+  const [cur, prev] = liftsOf(e);
+  return `<button class="row" data-act="logNew" data-ex="${esc(e)}"><span class="grow"><span class="t">${esc(e)}</span><br><span class="muted tiny">${cur ? fmtShort(cur.date) + (prev ? ` · önceki ${fmtNum(prev.max)} kg` : '') : 'Henüz girilmedi'}</span></span><span class="maxv">${cur ? fmtNum(cur.max) + '<small>kg</small>' : '–'}</span></button>`;
+}
 
 /* ---------- render ---------- */
 const VIEWS = {today:vToday, plan:vPlan, books:vBooks, gym:vGym, weight:vWeight};
@@ -558,65 +566,53 @@ function vGym(){
   }
 
   if (ui.gymTab === 'log'){
-    const s = today(), gt = gymToday(), sp = gt.w || {name:'Program yok', ex:[]};
-    const todays = liftsOn(s).map(l => l.ex.toLowerCase());
-    h += `<div class="card"><div class="label">Bugün · ${gt.done ? 'Tamamlandı ✓' : gt.picked ? 'Senin seçimin' : 'Sıradaki'}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 10px"><div style="font-size:22px;font-weight:700;overflow-wrap:anywhere">${esc(sp.name)}</div>${S.rot.length > 1 ? '<button class="link" data-act="gymPick" style="flex:none">Değiştir</button>' : ''}</div>`;
-    if ((sp.ex||[]).length){
-      h += '<div class="chips" style="margin-bottom:12px">' + sp.ex.map(e =>
-        `<button class="chipbtn${todays.includes(e.toLowerCase()) ? ' on' : ''}" data-act="logNew" data-ex="${esc(e)}">${todays.includes(e.toLowerCase()) ? '✓ ' : '+ '}${esc(e)}</button>`).join('') + '</div>';
+    const gt = gymToday();
+    if (gt.w){
+      h += `<div class="card"><div class="label">Bugün · ${gt.done ? 'Tamamlandı ✓' : gt.picked ? 'Senin seçimin' : 'Sıradaki'}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 12px"><div style="font-size:22px;font-weight:700;overflow-wrap:anywhere">${esc(gt.w.name)}</div>${S.rot.length > 1 ? '<button class="link" data-act="gymPick" style="flex:none">Değiştir</button>' : ''}</div>
+        <button class="btn${gt.done ? ' ghost' : ''}" data-act="gymDone">${gt.done ? 'Tamamlandı ✓ · Geri al' : 'Antrenmanı tamamla'}</button>
+        ${gt.done ? '' : '<div class="muted tiny" style="text-align:center;margin-top:8px">Tamamlayınca sıra bir ilerler.</div>'}</div>`;
     }
-    h += `<button class="btn" data-act="logNew">Hareket kaydet</button>`;
-    if (gt.w) h += `<button class="btn ghost" style="margin-top:8px" data-act="gymDone">${gt.done ? 'Tamamlandı işaretini kaldır' : 'Antrenmanı tamamla'}</button>
-      ${gt.done ? '' : '<div class="muted tiny" style="text-align:center;margin-top:8px">Hareket kaydettiğinde otomatik tamamlanır ve sıra ilerler.</div>'}`;
-    h += '</div>';
-    const dates = [...new Set(S.lifts.map(l => l.date))].sort().reverse().slice(0, 40);
-    if (!dates.length) h += `<div class="card empty"><b>Henüz kayıt yok</b>Yaptığın hareketi, kaldırdığın ağırlığı ve tekrar sayısını kaydet. Gelişim sekmesinde grafiğini görürsün.</div>`;
-    dates.forEach(d => {
-      h += `<div class="sec" style="font-size:16px">${d === s ? 'Bugün' : fmtDate(d, true)}<span class="muted small">${esc(gymName(d))}</span></div><div class="list">`;
-      S.lifts.filter(l => l.date === d).forEach(l => {
-        h += `<button class="row" data-act="editLog" data-id="${l.id}"><span class="grow"><span class="t">${esc(l.ex)}</span><br><span class="sets">${setsText(l.sets)}</span></span></button>`;
-      });
-      h += '</div>';
+    // Maks ağırlıklar: önce bugünün bölgesi, sonra sıranın geri kalanı, en sonda programda olmayanlar
+    const seen = new Set(), take = e => { const k = e.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; };
+    (gt.w ? [gt.w, ...S.rot.filter(w => w !== gt.w)] : S.rot).forEach(w => {
+      const exs = (w.ex||[]).filter(take); if (!exs.length) return;
+      h += `<div class="sec" style="font-size:16px">${esc(w.name)}${w === gt.w ? '<span class="muted small">Bugün</span>' : ''}</div><div class="list">${exs.map(maxRow).join('')}</div>`;
     });
+    const others = [...new Set(S.lifts.map(l => l.ex))].filter(take);
+    if (others.length) h += `<div class="sec" style="font-size:16px">Diğer</div><div class="list">${others.map(maxRow).join('')}</div>`;
+    if (!seen.size) h += `<div class="card empty"><b>Hareket yok</b>Program sekmesinden bölgelere hareket ekle, burada maks ağırlıklarını tut.</div>`;
+    h += `<button class="btn ghost" data-act="logNew" style="margin-bottom:10px">+ Başka hareket</button>
+      <div class="muted tiny" style="text-align:center">Harekete dokun, ağırlığın arttığında yeni maksını gir.</div>`;
   }
 
   if (ui.gymTab === 'progress'){
     const exs = [...new Set(S.lifts.map(l => l.ex))];
-    if (!exs.length) return h + `<div class="card empty"><b>Veri yok</b>Kayıt sekmesinden antrenman girdikçe her hareketin gelişim grafiği burada oluşur.</div>`;
+    if (!exs.length) return h + `<div class="card empty"><b>Veri yok</b>Kayıt sekmesinden maks ağırlık girdikçe her hareketin gelişim grafiği burada oluşur.</div>`;
     const byKey = new Map(exs.map(e => [e.toLowerCase(), e]));
     if (!ui.ex || !byKey.has(ui.ex.toLowerCase())) ui.ex = S.lifts[S.lifts.length-1].ex;
     h += `<select class="pick" data-change="pickEx">${[...byKey.values()].sort((a,b)=>a.localeCompare(b,'tr')).map(e => `<option${e.toLowerCase() === ui.ex.toLowerCase() ? ' selected' : ''}>${esc(e)}</option>`).join('')}</select>`;
-    h += `<div class="seg"><button class="${ui.metric === 'top' ? 'on' : ''}" data-act="metric" data-k="top">En ağır set</button><button class="${ui.metric === '1rm' ? 'on' : ''}" data-act="metric" data-k="1rm">Tahmini 1RM</button><button class="${ui.metric === 'vol' ? 'on' : ''}" data-act="metric" data-k="vol">Hacim</button></div>`;
-    const pts = progressPoints(ui.ex, ui.metric);
+    const pts = progressPoints(ui.ex);
     const first = pts[0], last = pts[pts.length-1], best = pts.reduce((m,p) => p.y > m.y ? p : m, pts[0]);
     const diff = last.y - first.y;
     h += `<div class="stats">
-      <div class="stat"><div class="v">${fmtNum(last.y)}</div><div class="k">Son (kg)</div></div>
+      <div class="stat"><div class="v">${fmtNum(last.y)}</div><div class="k">Şu an (kg)</div></div>
       <div class="stat"><div class="v">${fmtNum(best.y)}</div><div class="k">En iyi (kg)</div></div>
-      <div class="stat"><div class="v">${diff > 0 ? '+' : ''}${fmtNum(diff)}</div><div class="k">${pts.length} antrenmanda</div></div></div>`;
-    const metricName = {top:'En ağır set', '1rm':'Tahmini 1RM', vol:'Toplam hacim'}[ui.metric];
-    h += `<div class="card"><div class="label">${esc(ui.ex)} · ${metricName}</div><div class="chart" id="exChart"></div></div>`;
+      <div class="stat"><div class="v">${diff > 0 ? '+' : ''}${fmtNum(diff)}</div><div class="k">${pts.length} kayıtta</div></div></div>`;
+    h += `<div class="card"><div class="label">${esc(ui.ex)} · Maks ağırlık</div><div class="chart" id="exChart"></div></div>`;
     afterRender.push(() => drawChart($('#exChart'), pts, {unit:'kg'}));
     h += '<div class="sec" style="font-size:16px">Geçmiş</div><div class="list">';
-    S.lifts.filter(l => l.ex.toLowerCase() === ui.ex.toLowerCase()).sort((a,b) => b.date.localeCompare(a.date)).slice(0, 30).forEach(l => {
-      h += `<button class="row" data-act="editLog" data-id="${l.id}"><span class="time">${fmtShort(l.date)}</span><span class="grow sets">${setsText(l.sets)}</span></button>`;
+    liftsOf(ui.ex).slice(0, 30).forEach(l => {
+      h += `<button class="row" data-act="editLog" data-id="${l.id}"><span class="time">${fmtShort(l.date)}</span><span class="grow sets">${fmtNum(l.max)} kg</span></button>`;
     });
-    h += '</div><div class="muted tiny" style="text-align:center;margin-top:-4px">1RM: Epley formülüyle tahmin (ağırlık × (1 + tekrar/30)).</div>';
+    h += '</div>';
   }
   return h;
 }
-function progressPoints(ex, metric){
-  const k = ex.toLowerCase(), byDate = {};
-  S.lifts.filter(l => l.ex.toLowerCase() === k).forEach(l => (byDate[l.date] = byDate[l.date] || []).push(...l.sets));
-  return Object.keys(byDate).sort().map(d => {
-    const sets = byDate[d].filter(s => s.w != null && s.r > 0);
-    let y = 0;
-    if (metric === 'top') y = Math.max(0, ...sets.map(s => s.w));
-    if (metric === '1rm') y = Math.max(0, ...sets.map(s => s.r === 1 ? s.w : s.w * (1 + s.r/30)));
-    if (metric === 'vol') y = sets.reduce((a,s) => a + s.w*s.r, 0);
-    return {x:parseDs(d).getTime(), y, d};
-  });
+function progressPoints(ex){
+  const byDate = {};
+  liftsOf(ex).forEach(l => byDate[l.date] = Math.max(byDate[l.date] ?? 0, l.max || 0));
+  return Object.keys(byDate).sort().map(d => ({x:parseDs(d).getTime(), y:byDate[d], d}));
 }
 
 /* --- Kilo --- */
@@ -776,8 +772,6 @@ const A = {
   },
   logNew: d => liftForm(null, d.ex || ''),
   editLog: d => liftForm(S.lifts.find(l => l.id === d.id)),
-  addSet: () => addSetRow($('#setRows')),
-  delSet: (d, el) => { const rows = $('#setRows'); if (rows.children.length > 1){ el.closest('.setrow').remove(); renumber(rows); } },
   fillName: d => { const i = $('#sheet [name=name]'); if (i) i.value = d.v; },
   metric: d => { ui.metric = d.k; render(); },
   range: d => { ui.range = d.k; render(); },
@@ -893,46 +887,30 @@ function pickForm(){
     S.rot.map(w => `<button type="button" class="row${gt.w && gt.w.id === w.id ? ' cur' : ''}" data-act="gymPickSet" data-id="${w.id}"><span class="grow"><span class="t">${esc(w.name)}</span>${w.id === S.rotNext ? ' <span class="pill">Sıradaki</span>' : ''}<br><span class="muted tiny">${last[w.id] ? 'Son: ' + daysAgo(last[w.id]) : 'Henüz yapılmadı'}</span></span>${gt.w && gt.w.id === w.id ? '<span style="color:var(--accent);font-weight:700">✓</span>' : ''}</button>`).join('') + '</div>',
     onSubmit: () => {}});
 }
-function addSetRow(rows, w='', r='', ph){
-  const div = document.createElement('div'); div.className = 'setrow';
-  div.innerHTML = `<span class="n"></span><input name="w" inputmode="decimal" placeholder="${esc(ph ? fmtNum(ph.w) : 'kg')}" value="${esc(w)}"><input name="r" inputmode="numeric" placeholder="${esc(ph ? ph.r : 'tekrar')}" value="${esc(r)}"><button type="button" data-act="delSet" aria-label="Seti sil">×</button>`;
-  rows.appendChild(div); renumber(rows);
-}
-function renumber(rows){ [...rows.children].forEach((c,i) => c.querySelector('.n').textContent = i+1); }
 function liftForm(l, ex=''){
   const isNew = !l;
   const exName = l ? l.ex : ex;
-  const body = field('Tarih', `<input type="date" name="date" value="${l ? l.date : today()}" required>`) +
-    field('Hareket', `<input name="ex" list="exList" required value="${esc(exName)}" placeholder="örn. Bench Press"><datalist id="exList">${allExercises().map(e => `<option value="${esc(e)}">`).join('')}</datalist>`) +
-    `<div class="hint" id="lastHint"></div>
-    <div class="setrow" style="margin-bottom:4px"><span></span><span class="muted tiny">Ağırlık (kg)</span><span class="muted tiny">Tekrar</span><span></span></div>
-    <div id="setRows"></div><button type="button" class="btn ghost sm" data-act="addSet" style="margin:2px 0 14px">+ Set ekle</button>`;
-  openSheet({title: isNew ? 'Hareket kaydet' : 'Kaydı düzenle', body,
+  const body = field('Hareket', `<input name="ex" list="exList" required value="${esc(exName)}" placeholder="örn. Bench Press"><datalist id="exList">${allExercises().map(e => `<option value="${esc(e)}">`).join('')}</datalist>`) +
+    `<div class="hint" id="lastHint"></div>` +
+    `<div class="two">${field('Maks ağırlık (kg)', `<input name="max" inputmode="decimal" required value="${l ? fmtNum(l.max) : ''}" placeholder="örn. 80">`)}${field('Tarih', `<input type="date" name="date" value="${l ? l.date : today()}" required>`)}</div>`;
+  openSheet({title: isNew ? 'Yeni maks' : 'Kaydı düzenle', body,
     onOpen: f => {
-      const rows = f.querySelector('#setRows');
       const updHint = () => {
         const v = f.querySelector('[name=ex]').value.trim();
         const last = v ? lastSession(v) : null;
-        f.querySelector('#lastHint').textContent = last && (!l || last.id !== l.id) ? `Son (${fmtShort(last.date)}): ${setsText(last.sets)}` : '';
-        return last;
+        f.querySelector('#lastHint').textContent = last && (!l || last.id !== l.id) ? `Şu anki maksın: ${fmtNum(last.max)} kg (${fmtShort(last.date)})` : '';
       };
       f.querySelector('[name=ex]').addEventListener('input', updHint);
-      if (l) l.sets.forEach(s => addSetRow(rows, fmtNum(s.w), s.r));
-      else {
-        const last = updHint();
-        const n = last ? last.sets.length : 3;
-        for (let i = 0; i < n; i++) addSetRow(rows, '', '', last ? last.sets[i] : null);
-      }
       updHint();
+      if (isNew && exName) setTimeout(() => f.querySelector('[name=max]').focus(), 250);
     },
     onSubmit: fd => {
       const name = String(fd.get('ex')||'').trim(); if (!name) return false;
       const known = allExercises().find(e => e.toLowerCase() === name.toLowerCase()) || name;
-      const ws = fd.getAll('w'), rs = fd.getAll('r'), sets = [];
-      ws.forEach((w,i) => { const wn = num(w), rn = parseInt(rs[i]); if (wn != null && rn > 0) sets.push({w:wn, r:rn}); else if (wn == null && rn > 0) sets.push({w:0, r:rn}); });
-      if (!sets.length){ alert('En az bir set için ağırlık ve tekrar gir.'); return false; }
+      const w = num(fd.get('max'));
+      if (w == null || w <= 0 || w > 1000){ alert('Geçerli bir ağırlık gir (örn. 82,5).'); return false; }
       const o = l || {id:uid()};
-      o.date = fd.get('date') || today(); o.ex = known; o.sets = sets;
+      o.date = fd.get('date') || today(); o.ex = known; o.max = w; delete o.sets;
       if (isNew) S.lifts.push(o);
       ui.ex = known;
       // Bugüne ilk hareket kaydedilince günün antrenmanı tamamlanmış sayılır, sıra ilerler
