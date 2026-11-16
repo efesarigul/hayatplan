@@ -90,6 +90,13 @@ main{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 10px)
 .day.on small{color:rgba(255,255,255,.85)}
 .empty{text-align:center;color:var(--ink2);padding:28px 16px}
 .empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+.wk{display:flex;justify-content:space-between;gap:4px;margin-top:10px}
+.wk span{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px;color:var(--ink2);font-weight:600}
+.wk i{width:30px;height:30px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;color:#fff}
+.wk i svg{width:16px;height:16px}
+.wk .on i{background:var(--accent)}
+.wk .now{color:var(--accent)}
+.wk .now i{box-shadow:0 0 0 2px var(--accent)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
 .stat{background:var(--card);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
 .stat .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -305,6 +312,15 @@ function gymUnmark(date){
   // Sıra o işaretten sonra elle değiştirilmediyse eski haline döner
   if (S.rotNext === rotAfter(S, g.id)) S.rotNext = rotGet(g.prevNext) ? g.prevNext : (rotGet(g.id) ? g.id : S.rotNext);
 }
+// Haftalık spor sayısı (hafta pazartesi başlar); off = -1 geçen hafta
+function weekDates(off=0){ const d = parseDs(today()); d.setDate(d.getDate() - (d.getDay()+6)%7 + off*7); return Array.from({length:7}, (_, i) => { const x = new Date(d); x.setDate(d.getDate()+i); return ds(x); }); }
+const weekCount = (off=0) => weekDates(off).filter(d => S.gymDays[d]).length;
+function weekCard(){
+  const n = weekCount(), p = weekCount(-1), t = today();
+  return `<div class="card"><div class="label">Bu hafta</div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><div style="font-size:22px;font-weight:700">${n} gün spor</div><div class="muted small">Geçen hafta ${p} gün</div></div>
+    <div class="wk">${weekDates().map(d => `<span class="${S.gymDays[d] ? 'on' : ''}${d === t ? ' now' : ''}"><i>${S.gymDays[d] ? ICON_CHECK : ''}</i>${DAY_SHORT[parseDs(d).getDay()]}</span>`).join('')}</div></div>`;
+}
 function gymName(date){ const g = S.gymDays[date]; if (!g) return ''; const w = rotGet(g.id); return w ? w.name : (g.name || ''); }
 function lastDoneMap(){ const m = {}; Object.keys(S.gymDays).sort().forEach(d => m[S.gymDays[d].id] = d); return m; }
 function daysAgo(dt){ const n = Math.round((parseDs(today()) - parseDs(dt)) / 864e5); return n <= 0 ? 'bugün' : n === 1 ? 'dün' : n + ' gün önce'; }
@@ -377,11 +393,11 @@ function vToday(){
   if (sp && gt.done && gt.nx){
     // Bugün tamamlandı: kart yarınki bölgeyi gösterir
     h += `<div class="card mini"><div class="label">Spor · Yarın</div><div class="big">${esc(gt.nx.name)}</div>
-      <div class="muted small grow">Bugün ${esc(sp.name)} ✓${logged ? ` · ${logged} kayıt` : ''}</div>
+      <div class="muted small grow">Bugün ${esc(sp.name)} ✓ · Bu hafta ${weekCount()} gün</div>
       <button class="btn ghost sm" style="margin-top:10px" data-act="goLog">Kayda git</button></div>`;
   } else if (sp){
     h += `<div class="card mini"><div class="label">Spor · ${gt.done ? 'Bugün ✓' : gt.picked ? 'Bugün' : 'Sıradaki'}</div><div class="big">${esc(sp.name)}</div>
-      <div class="muted small grow">${gt.done ? 'Yapıldı' : `${(sp.ex||[]).length} hareket`}${logged ? ` · ${logged} kayıt` : ''}</div>
+      <div class="muted small grow">${gt.done ? 'Yapıldı' : `${(sp.ex||[]).length} hareket`} · Bu hafta ${weekCount()} gün</div>
       <button class="btn ghost sm" style="margin-top:10px" data-act="goLog">${logged || gt.done ? 'Devam et' : 'Başla'}</button></div>`;
   } else {
     h += `<div class="card mini"><div class="label">Spor</div><div class="big muted">Program yok</div><div class="grow"></div>
@@ -584,6 +600,7 @@ function vGym(){
         <button class="btn${gt.done ? ' ghost' : ''}" data-act="gymDone">${gt.done ? 'Tamamlandı ✓ · Geri al' : 'Antrenmanı tamamla'}</button>
         ${gt.done ? '' : '<div class="muted tiny" style="text-align:center;margin-top:8px">Tamamlayınca sıra bir ilerler.</div>'}</div>`;
     }
+    if (S.rot.length || Object.keys(S.gymDays).length) h += weekCard();
     // Maks ağırlıklar: önce bugünün bölgesi, sonra sıranın geri kalanı, en sonda programda olmayanlar
     const seen = new Set(), take = e => { const k = e.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; };
     (gt.w ? [gt.w, ...S.rot.filter(w => w !== gt.w)] : S.rot).forEach(w => {
