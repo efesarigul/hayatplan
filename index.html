@@ -286,10 +286,10 @@ function lastSession(ex, beforeDate){
 }
 /* --- spor sırası --- */
 const rotGet = id => S.rot.find(x => x.id === id) || null;
-// Bugünün antrenmanı: bugün yapıldıysa o, bugün için seçildiyse o, değilse sıradaki
+// Bugünün antrenmanı: bugün yapıldıysa o (nx = yarın gelecek olan), bugün için seçildiyse o, değilse sıradaki
 function gymToday(){
   const s = today(), g = S.gymDays[s];
-  if (g && rotGet(g.id)) return {w: rotGet(g.id), done: true};
+  if (g && rotGet(g.id)) return {w: rotGet(g.id), done: true, nx: rotGet(S.rotNext)};
   const pick = S.gymPick && S.gymPick.date === s ? rotGet(S.gymPick.id) : null;
   return {w: pick || rotGet(S.rotNext), done: false, picked: !!pick};
 }
@@ -374,7 +374,12 @@ function vToday(){
     h += `<div class="card mini"><div class="label">Okuduğum</div><div class="big muted">Kitap yok</div><div class="grow"></div>
       <button class="btn ghost sm" data-act="tab" data-tab="books">Kitap ekle</button></div>`;
   }
-  if (sp){
+  if (sp && gt.done && gt.nx){
+    // Bugün tamamlandı: kart yarınki bölgeyi gösterir
+    h += `<div class="card mini"><div class="label">Spor · Yarın</div><div class="big">${esc(gt.nx.name)}</div>
+      <div class="muted small grow">Bugün ${esc(sp.name)} ✓${logged ? ` · ${logged} kayıt` : ''}</div>
+      <button class="btn ghost sm" style="margin-top:10px" data-act="goLog">Kayda git</button></div>`;
+  } else if (sp){
     h += `<div class="card mini"><div class="label">Spor · ${gt.done ? 'Bugün ✓' : gt.picked ? 'Bugün' : 'Sıradaki'}</div><div class="big">${esc(sp.name)}</div>
       <div class="muted small grow">${gt.done ? 'Yapıldı' : `${(sp.ex||[]).length} hareket`}${logged ? ` · ${logged} kayıt` : ''}</div>
       <button class="btn ghost sm" style="margin-top:10px" data-act="goLog">${logged || gt.done ? 'Devam et' : 'Başla'}</button></div>`;
@@ -567,7 +572,13 @@ function vGym(){
 
   if (ui.gymTab === 'log'){
     const gt = gymToday();
-    if (gt.w){
+    if (gt.w && gt.done && gt.nx){
+      // Bugün tamamlandı: öne yarınki bölge çıkar, bugünkü küçük not olarak kalır
+      h += `<div class="card"><div class="label">Yarın · Sıradaki</div>
+        <div style="font-size:22px;font-weight:700;overflow-wrap:anywhere;margin:4px 0 6px">${esc(gt.nx.name)}</div>
+        <div class="muted small" style="margin-bottom:12px">Bugün ${esc(gt.w.name)} tamamlandı ✓${S.rot.length > 1 ? ' · <button class="link" data-act="gymPick" style="font-size:inherit;padding:0">Değiştir</button>' : ''}</div>
+        <button class="btn ghost" data-act="gymDone">Bugünü geri al</button></div>`;
+    } else if (gt.w){
       h += `<div class="card"><div class="label">Bugün · ${gt.done ? 'Tamamlandı ✓' : gt.picked ? 'Senin seçimin' : 'Sıradaki'}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 12px"><div style="font-size:22px;font-weight:700;overflow-wrap:anywhere">${esc(gt.w.name)}</div>${S.rot.length > 1 ? '<button class="link" data-act="gymPick" style="flex:none">Değiştir</button>' : ''}</div>
         <button class="btn${gt.done ? ' ghost' : ''}" data-act="gymDone">${gt.done ? 'Tamamlandı ✓ · Geri al' : 'Antrenmanı tamamla'}</button>
