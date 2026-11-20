@@ -91,7 +91,8 @@ main{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 10px)
 .empty{text-align:center;color:var(--ink2);padding:28px 16px}
 .empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
 .wk{display:flex;justify-content:space-between;gap:4px;margin-top:10px}
-.wk span{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px;color:var(--ink2);font-weight:600}
+.wk button{background:none;border:0;padding:0;font:inherit;cursor:pointer}
+.wk span,.wk button{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px;color:var(--ink2);font-weight:600}
 .wk i{width:30px;height:30px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;color:#fff}
 .wk i svg{width:16px;height:16px}
 .wk .on i{background:var(--accent)}
@@ -319,7 +320,10 @@ function weekCard(){
   const n = weekCount(), p = weekCount(-1), t = today();
   return `<div class="card"><div class="label">Bu hafta</div>
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><div style="font-size:22px;font-weight:700">${n} gün spor</div><div class="muted small">Geçen hafta ${p} gün</div></div>
-    <div class="wk">${weekDates().map(d => `<span class="${S.gymDays[d] ? 'on' : ''}${d === t ? ' now' : ''}"><i>${S.gymDays[d] ? ICON_CHECK : ''}</i>${DAY_SHORT[parseDs(d).getDay()]}</span>`).join('')}</div></div>`;
+    <div class="wk">${weekDates().map(d => S.gymDays[d]
+      ? `<button type="button" class="on${d === t ? ' now' : ''}" data-act="gymDayOff" data-d="${d}"><i>${ICON_CHECK}</i>${DAY_SHORT[parseDs(d).getDay()]}</button>`
+      : `<span class="${d === t ? 'now' : ''}"><i></i>${DAY_SHORT[parseDs(d).getDay()]}</span>`).join('')}</div>
+    ${n ? '<div class="muted tiny" style="text-align:center;margin-top:8px">Yanlış işaretlenen güne dokunarak kaldırabilirsin.</div>' : ''}</div>`;
 }
 function gymName(date){ const g = S.gymDays[date]; if (!g) return ''; const w = rotGet(g.id); return w ? w.name : (g.name || ''); }
 function lastDoneMap(){ const m = {}; Object.keys(S.gymDays).sort().forEach(d => m[S.gymDays[d].id] = d); return m; }
@@ -793,6 +797,11 @@ const A = {
     if (S.gymDays[s]) gymMark(s, d.id, S.gymDays[s].auto); else S.gymPick = {date:s, id:d.id};
     closeSheet(); save(); render();
   },
+  gymDayOff: d => {
+    const g = S.gymDays[d.d]; if (!g) return;
+    if (!confirm(`${fmtDate(d.d)} (${daysAgo(d.d)}) "${gymName(d.d)}" yapıldı olarak görünüyor. Bu işaret kaldırılsın mı? Sıra geri alınır.`)) return;
+    gymUnmark(d.d); save(); render();
+  },
   gymDone: () => {
     const s = today(), gt = gymToday();
     if (gt.done) gymUnmark(s); else if (gt.w) gymMark(s, gt.w.id, false);
@@ -941,14 +950,11 @@ function liftForm(l, ex=''){
       o.date = fd.get('date') || today(); o.ex = known; o.max = w; delete o.sets;
       if (isNew) S.lifts.push(o);
       ui.ex = known;
-      // Bugüne ilk hareket kaydedilince günün antrenmanı tamamlanmış sayılır, sıra ilerler
-      if (o.date === today() && !S.gymDays[o.date]){ const gt = gymToday(); if (gt.w) gymMark(o.date, gt.w.id, true); }
+      // Maks girmek antrenmanı tamamlamaz; gün yalnızca "Antrenmanı tamamla" ile işaretlenir
     },
     onDelete: isNew ? null : () => {
       if (!confirm('Kayıt silinsin mi?')) return false;
       S.lifts = S.lifts.filter(x => x !== l);
-      const g = S.gymDays[l.date];
-      if (l.date === today() && g && g.auto && !liftsOn(l.date).length) gymUnmark(l.date);
     }
   });
 }

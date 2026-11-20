@@ -1,5 +1,5 @@
 // HayatPlan çevrimdışı önbellek. Uygulamayı güncellediğinde VERSION'u artır.
-const VERSION = 'hayatplan-v8';
+const VERSION = 'hayatplan-v9';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon2-180.png', './icon2-192.png', './icon2-512.png'];
 
 self.addEventListener('install', e => {
